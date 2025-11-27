@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     
     <application
         android:label="VoiceBubble"
@@ -36,7 +37,12 @@
         <!-- Overlay Service for floating bubble -->
         <service
             android:name="com.voicebubble.app.OverlayService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating bubble overlay for quick voice recording" />
+        </service>
         
         <!-- Overlay entry point -->
         <meta-data

@@ -29,14 +29,14 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
-import io.flutter.embedding.android.FlutterActivity
 
 class OverlayService : Service() {
     
@@ -45,54 +45,77 @@ class OverlayService : Service() {
     private var isOverlayVisible = false
     
     companion object {
+        private const val TAG = "OverlayService"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "VoiceBubbleOverlay"
         
         fun start(context: Context) {
-            val intent = Intent(context, OverlayService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                val intent = Intent(context, OverlayService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                Log.d(TAG, "OverlayService start requested")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting OverlayService", e)
             }
         }
         
         fun stop(context: Context) {
-            val intent = Intent(context, OverlayService::class.java)
-            context.stopService(intent)
+            try {
+                val intent = Intent(context, OverlayService::class.java)
+                context.stopService(intent)
+                Log.d(TAG, "OverlayService stop requested")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping OverlayService", e)
+            }
         }
     }
     
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "OverlayService onCreate")
         
-        // Create notification channel
-        createNotificationChannel()
-        
-        // Start foreground service
-        val notification = createNotification()
-        startForeground(NOTIFICATION_ID, notification)
-        
-        // Initialize window manager
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        
-        // Create and show overlay
-        createOverlay()
+        try {
+            // Create notification channel
+            createNotificationChannel()
+            
+            // Start foreground service FIRST before creating overlay
+            val notification = createNotification()
+            startForeground(NOTIFICATION_ID, notification)
+            Log.d(TAG, "Foreground service started")
+            
+            // Initialize window manager
+            windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            
+            // Create and show overlay
+            createOverlay()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onCreate", e)
+            stopSelf()
+        }
     }
     
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Voice Bubble",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Keeps the floating bubble active so you can quickly record and rewrite messages"
-                setShowBadge(false)
+            try {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    "Voice Bubble",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Keeps the floating bubble active so you can quickly record and rewrite messages"
+                    setShowBadge(false)
+                }
+                
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.createNotificationChannel(channel)
+                Log.d(TAG, "Notification channel created")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating notification channel", e)
             }
-            
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
         }
     }
     
@@ -108,7 +131,7 @@ class OverlayService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Voice Bubble Active")
             .setContentText("Floating bubble ready for quick voice recording")
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -117,6 +140,8 @@ class OverlayService : Service() {
     
     private fun createOverlay() {
         try {
+            Log.d(TAG, "Creating overlay view...")
+            
             // Create overlay view
             overlayView = createBubbleView()
             
@@ -145,40 +170,78 @@ class OverlayService : Service() {
             // Add view to window manager
             windowManager?.addView(overlayView, params)
             isOverlayVisible = true
+            Log.d(TAG, "Overlay view added to window manager")
             
             // Set up touch listener for dragging
             setupDragListener(params)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error creating overlay", e)
             // If overlay creation fails, stop the service
             stopSelf()
         }
     }
     
     private fun createBubbleView(): View {
-        // Create a simple bubble view programmatically
-        return ImageView(this).apply {
-            try {
-                setImageResource(android.R.drawable.ic_btn_speak_now)
-                setPadding(32, 32, 32, 32)
-                setBackgroundResource(android.R.drawable.btn_default)
-                
-                setOnClickListener {
-                    try {
-                        // Open main app when bubble is clicked
-                        val intent = Intent(this@OverlayService, MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            putExtra("open_recording", true)
-                        }
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        Log.d(TAG, "Creating bubble view...")
+        
+        // Create container
+        val container = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                dpToPx(80),
+                dpToPx(80)
+            )
         }
+        
+        try {
+            // Create background view with gradient
+            val backgroundView = View(this).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundResource(R.drawable.bubble_background)
+            }
+            container.addView(backgroundView)
+            
+            // Create microphone icon
+            val iconView = ImageView(this).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    val padding = dpToPx(20)
+                    setMargins(padding, padding, padding, padding)
+                }
+                setImageResource(R.drawable.ic_microphone)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }
+            container.addView(iconView)
+            
+            // Set click listener
+            container.setOnClickListener {
+                try {
+                    Log.d(TAG, "Bubble clicked, opening MainActivity")
+                    // Open main app when bubble is clicked
+                    val intent = Intent(this@OverlayService, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        putExtra("open_recording", true)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error opening MainActivity", e)
+                }
+            }
+            
+            Log.d(TAG, "Bubble view created successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating bubble view components", e)
+        }
+        
+        return container
+    }
+    
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
     
     private fun setupDragListener(params: WindowManager.LayoutParams) {
@@ -209,7 +272,7 @@ class OverlayService : Service() {
                         try {
                             windowManager?.updateViewLayout(overlayView, params)
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            Log.e(TAG, "Error updating view layout", e)
                         }
                     }
                     true
@@ -228,6 +291,7 @@ class OverlayService : Service() {
     
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(TAG, "OverlayService onDestroy")
         
         // Remove overlay view
         try {
@@ -235,9 +299,10 @@ class OverlayService : Service() {
                 windowManager?.removeView(overlayView)
                 overlayView = null
                 isOverlayVisible = false
+                Log.d(TAG, "Overlay view removed")
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error removing overlay view", e)
         }
     }
     
@@ -245,4 +310,3 @@ class OverlayService : Service() {
         return null
     }
 }
-
