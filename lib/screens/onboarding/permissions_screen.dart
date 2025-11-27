@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform;
-import '../../services/overlay_service.dart';
+import '../../services/native_overlay_service.dart';
 
 class PermissionsScreen extends StatelessWidget {
   final VoidCallback onComplete;
@@ -14,16 +14,19 @@ class PermissionsScreen extends StatelessWidget {
     
     // Request overlay permission on Android
     if (Platform.isAndroid) {
-      final hasOverlayPermission = await OverlayService.checkOverlayPermission();
+      final hasOverlayPermission = await NativeOverlayService.checkPermission();
       if (!hasOverlayPermission) {
-        final granted = await OverlayService.requestOverlayPermission();
+        await NativeOverlayService.requestPermission();
+        // Wait for user to grant permission
+        await Future.delayed(const Duration(seconds: 1));
+        final granted = await NativeOverlayService.checkPermission();
         if (granted) {
           // Start the overlay service
-          await OverlayService.showOverlay();
+          await NativeOverlayService.showOverlay();
         }
       } else {
         // Permission already granted, show overlay
-        await OverlayService.showOverlay();
+        await NativeOverlayService.showOverlay();
       }
     }
     

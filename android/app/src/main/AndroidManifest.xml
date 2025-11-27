@@ -33,9 +33,9 @@
             </intent-filter>
         </activity>
         
-        <!-- Overlay Service for floating bubble -->
+        <!-- Custom Overlay Service for floating bubble -->
         <service
-            android:name="flutter.overlay.window.OverlayService"
+            android:name=".OverlayService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property

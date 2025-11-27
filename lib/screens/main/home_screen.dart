@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import '../../providers/app_state_provider.dart';
 import '../../constants/presets.dart';
 import '../../models/preset.dart';
-import '../../services/overlay_service.dart';
+import '../../services/native_overlay_service.dart';
 import '../main/recording_screen.dart';
 import '../main/preset_selection_screen.dart';
 import '../main/vault_screen.dart';
@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   Future<void> _checkOverlayStatus() async {
     if (Platform.isAndroid) {
-      final isActive = await OverlayService.isActive();
+      final isActive = await NativeOverlayService.isActive();
       setState(() {
         _overlayEnabled = isActive;
       });
@@ -39,11 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initializeOverlay() async {
     if (Platform.isAndroid) {
       // Auto-start overlay if permission is granted
-      final hasPermission = await OverlayService.checkOverlayPermission();
+      final hasPermission = await NativeOverlayService.checkPermission();
       if (hasPermission) {
-        await OverlayService.showOverlay();
+        final success = await NativeOverlayService.showOverlay();
         setState(() {
-          _overlayEnabled = true;
+          _overlayEnabled = success;
         });
       }
     }
@@ -53,14 +53,19 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!Platform.isAndroid) return;
     
     if (_overlayEnabled) {
-      await OverlayService.closeOverlay();
+      final success = await NativeOverlayService.hideOverlay();
       setState(() {
-        _overlayEnabled = false;
+        _overlayEnabled = !success;
       });
     } else {
-      final hasPermission = await OverlayService.checkOverlayPermission();
+      final hasPermission = await NativeOverlayService.checkPermission();
       if (!hasPermission) {
-        final granted = await OverlayService.requestOverlayPermission();
+        await NativeOverlayService.requestPermission();
+        
+        // Wait a bit for user to grant permission
+        await Future.delayed(const Duration(seconds: 1));
+        
+        final granted = await NativeOverlayService.checkPermission();
         if (!granted) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -74,10 +79,20 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       
-      await OverlayService.showOverlay();
+      final success = await NativeOverlayService.showOverlay();
       setState(() {
-        _overlayEnabled = true;
+        _overlayEnabled = success;
       });
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Overlay bubble is now visible! 🎉'),
+            backgroundColor: Color(0xFF10B981),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
   
