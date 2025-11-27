@@ -37,16 +37,24 @@ class NativeOverlayService {
   /// Starts the OverlayService as a foreground service
   static Future<bool> showOverlay() async {
     try {
-      debugPrint('🚀 Starting native overlay service...');
+      debugPrint('🚀 Starting native overlay bubble service...');
+      
+      // First check if we have permission
+      final hasPermission = await checkPermission();
+      if (!hasPermission) {
+        debugPrint('❌ No overlay permission, cannot start service');
+        return false;
+      }
+      
       final bool? result = await _channel.invokeMethod('showOverlay');
       if (result == true) {
-        debugPrint('✅ Native overlay service started successfully');
+        debugPrint('✅ Native overlay bubble service started successfully');
       } else {
-        debugPrint('❌ Native overlay service failed to start');
+        debugPrint('❌ Native overlay bubble service failed to start');
       }
       return result ?? false;
     } catch (e) {
-      debugPrint('❌ Error showing overlay: $e');
+      debugPrint('❌ Error showing overlay bubble: $e');
       return false;
     }
   }

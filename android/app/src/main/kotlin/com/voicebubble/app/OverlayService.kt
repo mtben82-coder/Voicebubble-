@@ -37,6 +37,11 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 
 class OverlayService : Service() {
     
@@ -218,17 +223,18 @@ class OverlayService : Service() {
             }
             container.addView(iconView)
             
-            // Set click listener - Open main app for now
+            // Set click listener - Show Flutter overlay popup
             container.setOnClickListener {
                 try {
-                    Log.d(TAG, "Bubble clicked, opening app")
-                    val intent = Intent(this@OverlayService, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        putExtra("open_recording", true)
-                    }
-                    startActivity(intent)
+                    Log.d(TAG, "Bubble clicked, showing Flutter overlay popup")
+                    
+                    // Broadcast to show Flutter overlay
+                    val broadcastIntent = Intent("SHOW_FLUTTER_OVERLAY")
+                    sendBroadcast(broadcastIntent)
+                    
+                    Log.d(TAG, "Broadcast sent to show overlay")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error opening app", e)
+                    Log.e(TAG, "Error showing Flutter overlay", e)
                 }
             }
             

@@ -11,13 +11,17 @@ class FlutterOverlayService {
     
     // Listen for trigger from native side
     _channel.setMethodCallHandler((call) async {
-      debugPrint('📞 Method call received: ${call.method}');
+      debugPrint('📞 Method call received from native: ${call.method}');
       
       if (call.method == 'triggerOverlay') {
+        debugPrint('🎯 Trigger received! Showing overlay now...');
         await showOverlay();
+        return true;
       }
       return null;
     });
+    
+    debugPrint('✅ FlutterOverlayService initialized and listening');
   }
   
   /// Show the Flutter overlay window
