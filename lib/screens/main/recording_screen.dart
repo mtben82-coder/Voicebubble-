@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../providers/app_state_provider.dart';
+import '../../services/ai_service.dart';
 import 'preset_selection_screen.dart';
 import 'result_screen.dart';
 
@@ -14,10 +17,14 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen>
     with SingleTickerProviderStateMixin {
-  final stt.SpeechToText _speech = stt.SpeechToText();
-  bool _isListening = false;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AIService _aiService = AIService();
+  bool _isRecording = false;
+  bool _isTranscribing = false;
   String _transcription = '';
+  String? _audioPath;
   late AnimationController _pulseController;
+  DateTime? _recordingStartTime;
   
   @override
   void initState() {
@@ -26,47 +33,125 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _initSpeech();
+    _startRecording();
   }
   
   @override
   void dispose() {
     _pulseController.dispose();
-    _speech.stop();
+    _audioRecorder.dispose();
     super.dispose();
   }
   
-  Future<void> _initSpeech() async {
-    final available = await _speech.initialize();
-    if (available) {
-      _startListening();
+  Future<void> _startRecording() async {
+    try {
+      // Check permission
+      if (!await _audioRecorder.hasPermission()) {
+        print('No microphone permission');
+        return;
+      }
+
+      // Get temp directory
+      final directory = await getTemporaryDirectory();
+      _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      // Start recording with high quality settings
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc, // High quality AAC
+          bitRate: 128000, // 128kbps
+          sampleRate: 44100, // CD quality
+        ),
+        path: _audioPath!,
+      );
+
+      setState(() {
+        _isRecording = true;
+        _recordingStartTime = DateTime.now();
+      });
+
+      print('Recording started: $_audioPath');
+    } catch (e) {
+      print('Error starting recording: $e');
+      setState(() {
+        _isRecording = false;
+      });
     }
   }
   
-  Future<void> _startListening() async {
-    setState(() {
-      _isListening = true;
-    });
-    
-    await _speech.listen(
-      onResult: (result) {
-        setState(() {
-          _transcription = result.recognizedWords;
-        });
-        context.read<AppStateProvider>().setTranscription(result.recognizedWords);
-      },
-    );
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (path != null && path.isNotEmpty) {
+        print('Recording stopped: $path');
+        await _transcribeAudio(path);
+      }
+    } catch (e) {
+      print('Error stopping recording: $e');
+      setState(() {
+        _isRecording = false;
+      });
+    }
   }
-  
-  Future<void> _stopListening() async {
-    await _speech.stop();
+
+  Future<void> _transcribeAudio(String path) async {
     setState(() {
-      _isListening = false;
+      _isTranscribing = true;
     });
+
+    try {
+      final audioFile = File(path);
+      print('Transcribing audio file: ${audioFile.path}');
+      print('File size: ${await audioFile.length()} bytes');
+      
+      // Use Whisper API via backend
+      final transcription = await _aiService.transcribeAudio(audioFile);
+      
+      setState(() {
+        _transcription = transcription;
+        _isTranscribing = false;
+      });
+
+      // Update app state
+      context.read<AppStateProvider>().setTranscription(transcription);
+      
+      print('Transcription complete: $transcription');
+    } catch (e) {
+      print('Transcription error: $e');
+      setState(() {
+        _isTranscribing = false;
+      });
+      
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Transcription failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _getRecordingDuration() {
+    if (_recordingStartTime == null) return '0:00';
+    final duration = DateTime.now().difference(_recordingStartTime!);
+    final minutes = duration.inMinutes;
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
   
   Future<void> _handleDone() async {
-    await _stopListening();
+    if (_isRecording) {
+      await _stopRecording();
+      return; // Wait for transcription to complete
+    }
     
     final appState = context.read<AppStateProvider>();
     
@@ -194,7 +279,11 @@ class _RecordingScreenState extends State<RecordingScreen>
                     
                     // Status
                     Text(
-                      _isListening ? 'Listening...' : 'Recording paused',
+                      _isTranscribing
+                          ? 'Transcribing...'
+                          : _isRecording
+                              ? 'Recording... ${_getRecordingDuration()}'
+                              : 'Processing',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -203,7 +292,11 @@ class _RecordingScreenState extends State<RecordingScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Speak naturally',
+                      _isTranscribing
+                          ? 'Using Whisper AI for perfect transcription'
+                          : _isRecording
+                              ? 'Speak naturally - no time limit!'
+                              : 'Please wait...',
                       style: TextStyle(
                         fontSize: 16,
                         color: secondaryTextColor,
@@ -257,33 +350,32 @@ class _RecordingScreenState extends State<RecordingScreen>
             ),
             
             // Done button
-            Positioned(
-              bottom: 32,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: _handleDone,
-                  child: Container(
-                    width: 128,
-                    height: 128,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(128),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Done',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+            if (!_isTranscribing)
+              Positioned(
+                bottom: 32,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _isRecording ? _handleDone : null,
+                    child: Container(
+                      width: 128,
+                      height: 128,
+                      decoration: BoxDecoration(
+                        color: _isRecording ? Colors.white : Colors.white.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(128),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.stop,
+                          size: 48,
                           color: backgroundColor,
                         ),
                       ),
@@ -291,7 +383,47 @@ class _RecordingScreenState extends State<RecordingScreen>
                   ),
                 ),
               ),
-            ),
+
+            // Transcribing indicator
+            if (_isTranscribing)
+              Positioned(
+                bottom: 32,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                              isDark ? const Color(0xFFE9D5FF) : const Color(0xFF9333EA),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Processing with Whisper AI...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: textColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
