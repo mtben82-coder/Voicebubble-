@@ -27,12 +27,12 @@ dependencies:
   path_provider: ^2.1.2
   
   # Speech & Permissions
-  speech_to_text: ^6.6.0
+  speech_to_text: ^7.0.0
   permission_handler: ^11.1.0
   
   # Authentication (Placeholders)
   google_sign_in: ^6.2.1
-  sign_in_with_apple: ^5.0.0
+  sign_in_with_apple: ^6.1.2
   
   # Networking
   http: ^1.2.0
