@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.text.TextUtils
 import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -17,18 +18,24 @@ import io.flutter.plugin.common.MethodChannel.Result
 
 class OverlayPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     
-    private lateinit var channel: MethodChannel
+    private lateinit var overlayChannel: MethodChannel
+    private lateinit var accessibilityChannel: MethodChannel
     private var context: Context? = null
     private var activity: Activity? = null
     
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "voicebubble/overlay")
-        channel.setMethodCallHandler(this)
+        overlayChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "voicebubble/overlay")
+        overlayChannel.setMethodCallHandler(this)
+        
+        accessibilityChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "voicebubble/accessibility")
+        accessibilityChannel.setMethodCallHandler(this)
+        
         context = flutterPluginBinding.applicationContext
     }
     
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
+            // Overlay permission methods
             "checkPermission" -> {
                 result.success(checkOverlayPermission())
             }
@@ -37,20 +44,21 @@ class OverlayPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 result.success(null)
             }
             "showOverlay" -> {
-                if (checkOverlayPermission()) {
-                    context?.let { OverlayService.start(it) }
-                    result.success(true)
-                } else {
-                    result.success(false)
-                }
+                result.success(isAccessibilityServiceEnabled())
             }
             "hideOverlay" -> {
-                context?.let { OverlayService.stop(it) }
                 result.success(true)
             }
             "isActive" -> {
-                // Check if service is running
-                result.success(false) // TODO: Implement proper check
+                result.success(isAccessibilityServiceEnabled())
+            }
+            // Accessibility service methods
+            "isEnabled" -> {
+                result.success(isAccessibilityServiceEnabled())
+            }
+            "openSettings" -> {
+                openAccessibilitySettings()
+                result.success(null)
             }
             else -> {
                 result.notImplemented()
@@ -79,8 +87,28 @@ class OverlayPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
     
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val ctx = context ?: return false
+        val expectedComponentName = "${ctx.packageName}/${VoiceBubbleAccessibilityService::class.java.name}"
+        
+        val enabledServicesSetting = Settings.Secure.getString(
+            ctx.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        
+        return enabledServicesSetting.split(":")
+            .any { it.equals(expectedComponentName, ignoreCase = true) }
+    }
+    
+    private fun openAccessibilitySettings() {
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        activity?.startActivity(intent)
+    }
+    
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
-        channel.setMethodCallHandler(null)
+        overlayChannel.setMethodCallHandler(null)
+        accessibilityChannel.setMethodCallHandler(null)
         context = null
     }
     
