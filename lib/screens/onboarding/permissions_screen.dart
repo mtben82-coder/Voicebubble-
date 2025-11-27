@@ -9,49 +9,16 @@ class PermissionsScreen extends StatelessWidget {
   const PermissionsScreen({super.key, required this.onComplete});
   
   Future<void> _requestPermissions(BuildContext context) async {
-    // Request microphone permission
+    // Request microphone permission FIRST
     final micStatus = await Permission.microphone.request();
     
-    // Request overlay permission on Android
-    if (Platform.isAndroid) {
-      final hasOverlayPermission = await NativeOverlayService.checkPermission();
-      if (!hasOverlayPermission) {
-        await NativeOverlayService.requestPermission();
-        
-        // Show instruction dialog
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Enable Overlay Permission'),
-              content: const Text(
-                'To use the floating bubble:\n\n'
-                '1. Find "VoiceBubble" in the list\n'
-                '2. Turn ON "Allow display over other apps"\n'
-                '3. Return to the app\n\n'
-                'The bubble will appear when you enable it!',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Got it!'),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    }
-    
-    if (micStatus.isGranted) {
-      onComplete();
-    } else {
+    if (!micStatus.isGranted) {
       // Show error dialog for microphone permission
       if (context.mounted) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Permission Required'),
+            title: const Text('Microphone Permission Required'),
             content: const Text(
               'VoiceBubble needs microphone access to record your voice. Please enable it in settings.',
             ),
@@ -65,13 +32,60 @@ class PermissionsScreen extends StatelessWidget {
                   Navigator.pop(context);
                   openAppSettings();
                 },
-                child: const Text('Settings'),
+                child: const Text('Open Settings'),
               ),
             ],
           ),
         );
       }
+      return;
     }
+    
+    // Request overlay permission on Android
+    if (Platform.isAndroid) {
+      final hasOverlayPermission = await NativeOverlayService.checkPermission();
+      
+      if (!hasOverlayPermission) {
+        // Show instruction dialog BEFORE opening settings
+        if (context.mounted) {
+          await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Enable Overlay Permission'),
+              content: const Text(
+                'Next, we need to enable the floating bubble:\n\n'
+                '1. Find "VoiceBubble" in the list\n'
+                '2. Turn ON "Allow display over other apps"\n'
+                '3. Press back to return here\n\n'
+                'Tap OK to open settings now.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        // Open overlay permission settings
+        await NativeOverlayService.requestPermission();
+        
+        // Wait a moment for user to grant permission
+        await Future.delayed(const Duration(seconds: 1));
+      }
+      
+      // Check if permission was granted and start the overlay service
+      final permissionGranted = await NativeOverlayService.checkPermission();
+      if (permissionGranted) {
+        debugPrint('✅ Overlay permission granted, starting service...');
+        await NativeOverlayService.showOverlay();
+      }
+    }
+    
+    // Complete onboarding
+    onComplete();
   }
   
   @override

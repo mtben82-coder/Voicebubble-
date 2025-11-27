@@ -51,21 +51,25 @@ class _HomeScreenState extends State<HomeScreen> {
     
     if (_overlayEnabled) {
       // Stop the overlay service
+      debugPrint('🛑 Stopping overlay service...');
       await NativeOverlayService.hideOverlay();
       setState(() {
         _overlayEnabled = false;
       });
+      debugPrint('✅ Overlay service stopped');
     } else {
       // Check if we have overlay permission
+      debugPrint('🔍 Checking overlay permission...');
       final hasPermission = await NativeOverlayService.checkPermission();
+      debugPrint('Permission status: $hasPermission');
       
       if (!hasPermission) {
         // Request overlay permission
-        await NativeOverlayService.requestPermission();
+        debugPrint('📱 Requesting overlay permission...');
         
-        // Show instruction dialog
+        // Show instruction dialog FIRST
         if (mounted) {
-          showDialog(
+          await showDialog(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Enable Overlay Permission'),
@@ -73,36 +77,75 @@ class _HomeScreenState extends State<HomeScreen> {
                 'To use the floating bubble:\n\n'
                 '1. Find "VoiceBubble" in the list\n'
                 '2. Turn ON "Allow display over other apps"\n'
-                '3. Return to the app and tap "Setup" again\n\n'
-                'The bubble will appear on your screen!',
+                '3. Press back to return here\n\n'
+                'Tap OK to open settings now.',
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Got it!'),
+                  child: const Text('OK'),
                 ),
               ],
             ),
           );
         }
         
-        // Check permission after a delay
-        Future.delayed(const Duration(seconds: 2), () async {
-          final stillHasPermission = await NativeOverlayService.checkPermission();
-          if (stillHasPermission && mounted) {
-            // Start the overlay service
-            final started = await NativeOverlayService.showOverlay();
-            setState(() {
-              _overlayEnabled = started;
-            });
+        await NativeOverlayService.requestPermission();
+        
+        // Give user time to enable permission
+        await Future.delayed(const Duration(seconds: 1));
+        
+        // Check if permission was granted
+        final permissionGranted = await NativeOverlayService.checkPermission();
+        debugPrint('Permission granted: $permissionGranted');
+        
+        if (permissionGranted && mounted) {
+          // Start the overlay service
+          debugPrint('🚀 Starting overlay service...');
+          final started = await NativeOverlayService.showOverlay();
+          debugPrint('Service started: $started');
+          
+          setState(() {
+            _overlayEnabled = started;
+          });
+          
+          if (started && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✓ Bubble is now active on the left side!'),
+                backgroundColor: Color(0xFF10B981),
+                duration: Duration(seconds: 3),
+              ),
+            );
           }
-        });
+        }
       } else {
         // We have permission, start the overlay service
+        debugPrint('🚀 Starting overlay service (permission already granted)...');
         final started = await NativeOverlayService.showOverlay();
+        debugPrint('Service started: $started');
+        
         setState(() {
           _overlayEnabled = started;
         });
+        
+        if (started && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Bubble is now active on the left side!'),
+              backgroundColor: Color(0xFF10B981),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ Failed to start bubble service'),
+              backgroundColor: Color(0xFFEF4444),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     }
   }
