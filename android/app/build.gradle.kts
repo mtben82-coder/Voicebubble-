@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.voicebubble"
+    namespace = "com.voicebubble.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
