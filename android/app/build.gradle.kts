@@ -64,13 +64,10 @@ android {
                 signingConfig = signingConfigs.getByName("debug")
             }
             
-            // Enable code shrinking and obfuscation
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // Disable code shrinking for now to avoid R8 issues
+            // You can enable this later after adding proper ProGuard rules
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
