@@ -12,79 +12,83 @@ class OnboardingThree extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Spacer(),
-                // Content
-                Column(
-                  children: [
-                    // Icon
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF10B981), Color(0xFF14B8A6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.5),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
+          child: Column(
+            children: [
+              // Scrollable content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(32, 48, 32, 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 80),
+                      // Icon
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF10B981), Color(0xFF14B8A6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withOpacity(0.5),
+                              blurRadius: 30,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.bolt,
+                          size: 48,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      // Title
+                      const Text(
+                        'Works Everywhere',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      // Description
+                      const Text(
+                        'A floating bubble appears over any app. WhatsApp, Gmail, Instagram — anywhere you type.',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFFA7F3D0),
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      // App Icons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildAppIcon(Icons.chat_bubble_outline),
+                          const SizedBox(width: 16),
+                          _buildAppIcon(Icons.email_outlined),
+                          const SizedBox(width: 16),
+                          _buildAppIcon(Icons.language),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.bolt,
-                        size: 48,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-                    // Title
-                    const Text(
-                      'Works Everywhere',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    // Description
-                    const Text(
-                      'A floating bubble appears over any app. WhatsApp, Gmail, Instagram — anywhere you type.',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFFA7F3D0),
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    // App Icons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildAppIcon(Icons.chat_bubble_outline),
-                        const SizedBox(width: 16),
-                        _buildAppIcon(Icons.email_outlined),
-                        const SizedBox(width: 16),
-                        _buildAppIcon(Icons.language),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
-                const Spacer(),
-                // Button
-                SizedBox(
+              ),
+              // Fixed button at bottom
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: onNext,
@@ -106,8 +110,8 @@ class OnboardingThree extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
