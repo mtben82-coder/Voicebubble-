@@ -4,34 +4,32 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+
 import { initRedis, closeRedis, redisHealthCheck } from './config/redis.js';
 import { getCacheStats } from './utils/cache.js';
 import { checkOpenAIHealth } from './utils/openai.js';
+
 import transcribeRouter from './routes/transcribe.js';
 import rewriteRouter from './routes/rewrite.js';
 
-// Load environment variables
+// Load env
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// If true, /health will return 503 when deps are unhealthy.
-// If false (default), /health is always 200 and just reports status in JSON.
-const STRICT_HEALTHCHECK = process.env.STRICT_HEALTHCHECK === 'true';
-
-// ===== MIDDLEWARE CONFIGURATION =====
+// ===== MIDDLEWARE =====
 
 // Security headers
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Allow SSE
+    contentSecurityPolicy: false, // allow SSE
     crossOriginEmbedderPolicy: false,
   })
 );
 
-// CORS configuration
+// CORS
 app.use(
   cors({
     origin:
@@ -41,23 +39,21 @@ app.use(
             'https://www.voicebubble.app',
             /\.railway\.app$/,
           ]
-        : '*', // Allow all origins in development
+        : '*',
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   })
 );
 
-// Compression middleware
+// Compression
 app.use(
   compression({
     filter: (req, res) => {
-      if (req.headers['x-no-compression']) {
-        return false;
-      }
+      if (req.headers['x-no-compression']) return false;
       return compression.filter(req, res);
     },
-    level: 6, // Balanced compression level
+    level: 6,
   })
 );
 
@@ -65,94 +61,76 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiting
+// Rate limiting (only /api)
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100, // Limit each IP to 100 requests per window
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
   message: {
     error: 'Too many requests',
     message: 'Please try again later',
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for health checks
   skip: (req) => req.path === '/health',
 });
 
-// Apply limiter only to API routes
 app.use('/api/', limiter);
 
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
   const start = Date.now();
-
   res.on('finish', () => {
     const duration = Date.now() - start;
     console.log(`${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
   });
-
   next();
 });
 
 // ===== ROUTES =====
 
-// Health check endpoint
+// 🚑 HEALTH CHECK – ALWAYS 200 (Railway-safe)
 app.get('/health', async (req, res) => {
-  let redisHealth = {
-    status: 'unknown',
-    error: null,
-  };
-  let openaiHealthy = false;
-  let openaiError = null;
+  const timestamp = new Date().toISOString();
+
+  // Everything in here is *best-effort* – nothing is allowed to crash or 503.
+  let redisStatus;
+  let openaiStatus;
 
   try {
-    redisHealth = await redisHealthCheck();
+    redisStatus = await redisHealthCheck();
   } catch (err) {
-    console.error('Redis health check error:', err);
-    redisHealth = {
-      status: 'unhealthy',
-      error: err.message || 'Redis health check failed',
+    console.error('Redis health error:', err.message);
+    redisStatus = { status: 'error', message: err.message };
+  }
+
+  try {
+    const ok = await checkOpenAIHealth();
+    openaiStatus = {
+      status: ok ? 'healthy' : 'unhealthy',
+      configured: !!process.env.OPENAI_API_KEY,
+    };
+  } catch (err) {
+    console.error('OpenAI health error:', err.message);
+    openaiStatus = {
+      status: 'error',
+      configured: !!process.env.OPENAI_API_KEY,
+      message: err.message,
     };
   }
 
-  try {
-    openaiHealthy = await checkOpenAIHealth();
-  } catch (err) {
-    console.error('OpenAI health check error:', err);
-    openaiHealthy = false;
-    openaiError = err.message || 'OpenAI health check failed';
-  }
-
-  const health = {
+  // NEVER return 503 here – we only *report* diagnostics.
+  res.status(200).json({
     status: 'ok',
-    timestamp: new Date().toISOString(),
     environment: NODE_ENV,
+    timestamp,
     services: {
-      redis: redisHealth,
-      openai: {
-        status: openaiHealthy ? 'healthy' : 'unhealthy',
-        configured: !!process.env.OPENAI_API_KEY,
-        error: openaiError || null,
-      },
+      redis: redisStatus,
+      openai: openaiStatus,
     },
-  };
-
-  const allHealthy =
-    redisHealth.status === 'healthy' && openaiHealthy && !!process.env.OPENAI_API_KEY;
-
-  // IMPORTANT:
-  // By default, /health returns 200 so Railway doesn't kill the app.
-  // If you want strict behavior later, set STRICT_HEALTHCHECK=true in env.
-  const statusCode = STRICT_HEALTHCHECK && !allHealthy ? 503 : 200;
-
-  return res.status(statusCode).json({
-    ...health,
-    overall: allHealthy ? 'healthy' : 'degraded',
-    strict_healthcheck: STRICT_HEALTHCHECK,
   });
 });
 
-// Stats endpoint (useful for monitoring)
+// 📊 STATS
 app.get('/stats', async (req, res) => {
   try {
     const cacheStats = await getCacheStats();
@@ -173,11 +151,11 @@ app.get('/stats', async (req, res) => {
   }
 });
 
-// API Routes
+// API routes
 app.use('/api/transcribe', transcribeRouter);
 app.use('/api/rewrite', rewriteRouter);
 
-// Root endpoint
+// Root
 app.get('/', (req, res) => {
   res.json({
     name: 'VoiceBubble API',
@@ -194,7 +172,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// 404 handler
+// 404
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not found',
@@ -204,10 +182,8 @@ app.use((req, res) => {
 });
 
 // Global error handler
-// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-
   res.status(err.status || 500).json({
     error: err.name || 'Internal server error',
     message: err.message || 'An unexpected error occurred',
@@ -215,27 +191,25 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ===== SERVER INITIALIZATION =====
+// ===== SERVER INITIALISATION =====
 
 let server;
-let redisInitialized = false;
 
 async function startServer() {
   try {
-    console.log('Initializing Redis...');
+    console.log('Starting VoiceBubble backend…');
+
+    // Init Redis (non-fatal)
     try {
       await initRedis();
-      redisInitialized = true;
-      console.log('Redis initialized');
     } catch (err) {
-      redisInitialized = false;
-      console.error('Failed to initialize Redis (continuing without Redis):', err);
+      console.error('Redis init failed (continuing without cache):', err.message);
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      console.warn('WARNING: OPENAI_API_KEY not set. OpenAI-dependent features will fail.');
+      console.warn('WARNING: OPENAI_API_KEY not set. OpenAI calls will fail.');
     } else {
-      console.log('OpenAI API key configured');
+      console.log('OpenAI API key detected.');
     }
 
     server = app.listen(PORT, '0.0.0.0', () => {
@@ -245,21 +219,14 @@ async function startServer() {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📍 Environment: ${NODE_ENV}`);
       console.log(`🌐 Port: ${PORT}`);
-      console.log(`🔗 URL: http://localhost:${PORT}`);
       console.log(`💚 Health: http://localhost:${PORT}/health`);
       console.log(`📊 Stats: http://localhost:${PORT}/stats`);
-      console.log(`🧠 Redis: ${redisInitialized ? 'initialized' : 'NOT initialized'}`);
-      console.log(
-        `🤖 OpenAI: ${process.env.OPENAI_API_KEY ? 'configured' : 'MISSING API KEY'}`
-      );
-      console.log(`🔒 STRICT_HEALTHCHECK: ${STRICT_HEALTHCHECK}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('');
     });
 
-    // Keep-alive settings
-    server.keepAliveTimeout = 65000; // 65 seconds
-    server.headersTimeout = 66000; // Slightly longer than keepAliveTimeout
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
@@ -270,7 +237,6 @@ async function startServer() {
 async function gracefulShutdown(signal) {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 
-  // Stop accepting new connections
   if (server) {
     await new Promise((resolve) => {
       server.close(() => {
@@ -282,20 +248,17 @@ async function gracefulShutdown(signal) {
 
   try {
     await closeRedis();
-    console.log('Redis connection closed');
   } catch (err) {
-    console.error('Error closing Redis connection:', err);
+    console.error('Error closing Redis connection:', err.message);
   }
 
-  console.log('Graceful shutdown complete');
+  console.log('Shutdown complete');
   process.exit(0);
 }
 
-// Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Handle uncaught errors
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   gracefulShutdown('uncaughtException');
@@ -305,7 +268,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// Start the server
+// Start
 startServer();
 
 export default app;
