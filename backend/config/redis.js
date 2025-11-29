@@ -1,100 +1,114 @@
-import { createClient } from 'redis';
+import { createClient } from "redis";
 
-let redisClient = null;
-let isConnected = false;
+let redis = null;
+let redisStatus = "disconnected"; // connected | disconnected | reconnecting | error
 
 /**
- * Initialize Redis client
+ * Initialize Redis safely
  */
 export async function initRedis() {
   try {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    
-    redisClient = createClient({
-      url: redisUrl,
+    const url = process.env.REDIS_URL;
+    if (!url) {
+      console.warn("⚠️ No REDIS_URL provided — cache disabled.");
+      redisStatus = "disabled";
+      return null;
+    }
+
+    redis = createClient({
+      url,
       socket: {
+        connectTimeout: 8000,
         reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('Redis: Too many reconnection attempts');
-            return new Error('Redis reconnection failed');
-          }
-          // Exponential backoff: 50ms, 100ms, 200ms, 400ms, etc.
-          return Math.min(retries * 50, 3000);
+          redisStatus = "reconnecting";
+          return Math.min(retries * 200, 3000);
         }
       }
     });
 
-    // Event handlers
-    redisClient.on('error', (err) => {
-      console.error('Redis Client Error:', err);
-      isConnected = false;
+    // Events
+    redis.on("connect", () => {
+      console.log("Redis: Connecting...");
+      redisStatus = "connecting";
     });
 
-    redisClient.on('connect', () => {
-      console.log('Redis: Connecting...');
+    redis.on("ready", () => {
+      console.log("Redis: Connected & ready");
+      redisStatus = "connected";
     });
 
-    redisClient.on('ready', () => {
-      console.log('Redis: Connected and ready');
-      isConnected = true;
+    redis.on("reconnecting", () => {
+      console.log("Redis: Reconnecting...");
+      redisStatus = "reconnecting";
     });
 
-    redisClient.on('reconnecting', () => {
-      console.log('Redis: Reconnecting...');
-      isConnected = false;
+    redis.on("end", () => {
+      console.log("Redis: Connection closed");
+      redisStatus = "disconnected";
     });
 
-    await redisClient.connect();
-    
-    return redisClient;
-  } catch (error) {
-    console.error('Failed to initialize Redis:', error);
-    // Don't throw - allow app to run without cache
+    redis.on("error", (err) => {
+      console.error("Redis Error:", err.message);
+      redisStatus = "error";
+    });
+
+    // Attempt connection but DO NOT block startup
+    redis.connect().catch((err) => {
+      console.error("Redis startup failed:", err.message);
+      redisStatus = "error";
+    });
+
+    return redis;
+  } catch (err) {
+    console.error("Redis init crashed:", err.message);
+    redisStatus = "error";
     return null;
   }
 }
 
 /**
- * Get Redis client instance
- */
-export function getRedisClient() {
-  return redisClient;
-}
-
-/**
- * Check if Redis is connected
+ * Check connection state
  */
 export function isRedisConnected() {
-  return isConnected && redisClient && redisClient.isOpen;
+  return redisStatus === "connected";
 }
 
 /**
- * Close Redis connection gracefully
+ * Get Redis client (even if disconnected)
+ */
+export function getRedisClient() {
+  return redis;
+}
+
+/**
+ * Graceful shutdown
  */
 export async function closeRedis() {
-  if (redisClient) {
-    try {
-      await redisClient.quit();
-      console.log('Redis: Connection closed');
-    } catch (error) {
-      console.error('Error closing Redis connection:', error);
-    }
+  if (!redis) return;
+  try {
+    await redis.quit();
+    console.log("Redis: Connection closed");
+  } catch (err) {
+    console.error("Redis close error:", err.message);
   }
 }
 
 /**
- * Health check for Redis
+ * Health check (NEVER kills backend)
  */
 export async function redisHealthCheck() {
-  if (!isRedisConnected()) {
-    return { status: 'disconnected', message: 'Redis is not connected' };
+  if (redisStatus === "disabled") {
+    return { status: "disabled", message: "Redis not configured" };
+  }
+
+  if (!redis || redisStatus !== "connected") {
+    return { status: redisStatus, message: "Redis not connected" };
   }
 
   try {
-    await redisClient.ping();
-    return { status: 'healthy', message: 'Redis is operational' };
-  } catch (error) {
-    return { status: 'unhealthy', message: error.message };
+    await redis.ping();
+    return { status: "connected", message: "Redis operational" };
+  } catch (err) {
+    return { status: "error", message: err.message };
   }
 }
-
