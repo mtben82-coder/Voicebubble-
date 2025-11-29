@@ -136,9 +136,20 @@ class _RecordingScreenState extends State<RecordingScreen>
         
         // Use Whisper API for final accurate transcription
         final audioFile = File(path);
+        
+        if (!await audioFile.exists()) {
+          throw Exception('Audio file not found');
+        }
+        
+        print('Transcribing audio file (${await audioFile.length()} bytes)...');
         final transcription = await _aiService.transcribeAudio(audioFile);
         
+        if (transcription.isEmpty) {
+          throw Exception('No transcription received from server');
+        }
+        
         // Update app state with Whisper result
+        if (!mounted) return;
         context.read<AppStateProvider>().setTranscription(transcription);
         
         print('Final transcription: $transcription');
@@ -152,12 +163,46 @@ class _RecordingScreenState extends State<RecordingScreen>
             ),
           );
         }
+      } else {
+        throw Exception('No audio recorded');
       }
     } catch (e) {
-      print('Error stopping: $e');
+      print('Error stopping/transcribing: $e');
+      
+      if (!mounted) return;
+      
       setState(() {
         _isProcessing = false;
       });
+      
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Transcription Failed'),
+          content: Text(
+            'Could not transcribe your audio:\n\n$e\n\nPlease check:\n'
+            '• Backend server is running\n'
+            '• OPENAI_API_KEY is configured\n'
+            '• You have internet connection',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+              },
+              child: const Text('Try Again'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Go back to home
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
     }
   }
 

@@ -4,8 +4,13 @@ import 'package:dio/dio.dart';
 import '../models/preset.dart';
 
 class AIService {
-  // Your Railway backend URL
+  // Backend URL - Change this based on your setup
+  // PRODUCTION: Use your Railway deployment URL
+  // LOCAL: Use your computer's local IP (find with 'ipconfig' or 'ifconfig')
   static const String _backendUrl = 'https://voicebubble-production.up.railway.app';
+  
+  // UNCOMMENT THIS FOR LOCAL DEVELOPMENT:
+  // static const String _backendUrl = 'http://192.168.1.XXX:3000'; // Replace XXX with your local IP
   
   final Dio _dio = Dio();
   
