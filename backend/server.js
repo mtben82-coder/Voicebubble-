@@ -1,3 +1,10 @@
+console.log("SERVER STARTING… LOADING FILES NOW");
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION:", reason);
+});
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
