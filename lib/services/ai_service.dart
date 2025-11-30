@@ -50,7 +50,7 @@ class AIService {
   }
   
   /// Rewrite text using backend GPT-4 mini API
-  Future<String> rewriteText(String text, Preset preset) async {
+  Future<String> rewriteText(String text, Preset preset, String languageCode) async {
     try {
       // Use batch endpoint (non-streaming) for simplicity
       final response = await _dio.post(
@@ -58,6 +58,7 @@ class AIService {
         data: {
           'text': text,
           'presetId': preset.id,
+          'language': languageCode, // Output language preference
         },
       );
       

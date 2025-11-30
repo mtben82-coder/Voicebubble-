@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:io' show Platform;
 import '../../providers/app_state_provider.dart';
 import '../../constants/presets.dart';
+import '../../constants/languages.dart';
 import '../../models/preset.dart';
 import '../../services/native_overlay_service.dart';
 import '../main/recording_screen.dart';
@@ -420,6 +421,100 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // Language Selector
+                    Consumer<AppStateProvider>(
+                      builder: (context, appState, _) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF9333EA).withOpacity(0.2),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: DropdownButton<Language>(
+                            value: appState.selectedLanguage,
+                            icon: Icon(
+                              Icons.arrow_drop_down,
+                              color: isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA),
+                            ),
+                            underline: const SizedBox(),
+                            dropdownColor: surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            isExpanded: false,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: textColor,
+                            ),
+                            items: AppLanguages.all.map((Language language) {
+                              return DropdownMenuItem<Language>(
+                                value: language,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      language.flag,
+                                      size: 20,
+                                      color: isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(language.nativeName),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '(${language.name})',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: secondaryTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (Language? newLanguage) {
+                              if (newLanguage != null) {
+                                appState.setSelectedLanguage(newLanguage);
+                              }
+                            },
+                            selectedItemBuilder: (BuildContext context) {
+                              return AppLanguages.all.map((Language language) {
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      language.flag,
+                                      size: 20,
+                                      color: isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      language.nativeName,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList();
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    
                     // Record Button
                     GestureDetector(
                       onTap: () {

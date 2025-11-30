@@ -124,7 +124,7 @@ router.post('/batch', async (req, res) => {
   const startTime = Date.now();
   
   try {
-    const { text, presetId } = req.body;
+    const { text, presetId, language } = req.body;
 
     if (!text || typeof text !== 'string') {
       return res.status(400).json({
@@ -140,10 +140,12 @@ router.post('/batch', async (req, res) => {
       });
     }
 
-    console.log(`Batch rewrite request: preset=${presetId}, length=${text.length}`);
+    const outputLanguage = language || 'en'; // Default to English if not specified
+    console.log(`Batch rewrite request: preset=${presetId}, language=${outputLanguage}, length=${text.length}`);
 
-    // Check cache
-    const cachedResult = await getCachedRewrite(text, presetId);
+    // Check cache (include language in cache key)
+    const cacheKey = `${text}_${presetId}_${outputLanguage}`;
+    const cachedResult = await getCachedRewrite(cacheKey, presetId);
     
     if (cachedResult) {
       const duration = Date.now() - startTime;
@@ -156,8 +158,8 @@ router.post('/batch', async (req, res) => {
       });
     }
 
-    // Build messages and rewrite
-    const messages = buildMessages(presetId, text);
+    // Build messages and rewrite with language preference
+    const messages = buildMessages(presetId, text, outputLanguage);
     const params = getPresetParameters(presetId);
 
     let fullText = '';
@@ -165,8 +167,8 @@ router.post('/batch', async (req, res) => {
       fullText += chunk;
     });
 
-    // Cache result
-    await cacheRewrite(text, presetId, result);
+    // Cache result (include language in cache key)
+    await cacheRewrite(cacheKey, presetId, result);
 
     const duration = Date.now() - startTime;
     console.log(`Batch rewrite completed in ${duration}ms`);

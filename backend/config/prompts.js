@@ -735,16 +735,25 @@ export function getPresetConfig(presetId) {
 
 /**
  * Build messages array for OpenAI API with few-shot examples
+ * @param {string} presetId - The preset ID to use
+ * @param {string} userText - The user's input text
+ * @param {string} language - Optional language code (ISO 639-1) for output
  */
-export function buildMessages(presetId, userText) {
+export function buildMessages(presetId, userText, language = 'en') {
   const config = getPresetConfig(presetId);
+
+  // Language instruction (only add if not English)
+  const languageInstruction = language && language !== 'en'
+    ? `IMPORTANT: You must write your response in the following language: "${language}" (language code: ${language}). Do not use English unless the language code is "en".`
+    : '';
 
   const systemContent = [
     SMART_ENGINE,
     `Current preset id: "${presetId}".`,
+    languageInstruction,
     config.systemPrompt,
     config.constraints
-  ].join('\n\n');
+  ].filter(part => part).join('\n\n'); // filter removes empty strings
 
   const messages = [
     {

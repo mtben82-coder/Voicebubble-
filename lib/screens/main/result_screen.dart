@@ -31,6 +31,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final appState = context.read<AppStateProvider>();
     final transcription = appState.transcription;
     final preset = appState.selectedPreset;
+    final language = appState.selectedLanguage;
     
     if (transcription.isEmpty || preset == null) {
       setState(() {
@@ -48,7 +49,11 @@ class _ResultScreenState extends State<ResultScreen> {
     
     try {
       final aiService = AIService();
-      final rewrittenText = await aiService.rewriteText(transcription, preset);
+      final rewrittenText = await aiService.rewriteText(
+        transcription, 
+        preset,
+        language.code, // Pass the selected language code
+      );
       
       setState(() {
         _rewrittenText = rewrittenText;
