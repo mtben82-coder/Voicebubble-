@@ -344,8 +344,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                                 borderRadius: BorderRadius.circular(8),
                                 gradient: LinearGradient(
                                   colors: [
-                                    const Color(0xFF9333EA),
-                                    const Color(0xFFEC4899),
+                                    const Color(0xFF3B82F6),
+                                    const Color(0xFF2563EB),
                                   ],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,

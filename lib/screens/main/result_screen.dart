@@ -97,12 +97,11 @@ class _ResultScreenState extends State<ResultScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F7);
-    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
-    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final primaryColor = isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA);
+    final backgroundColor = const Color(0xFF000000); // Always black
+    final surfaceColor = const Color(0xFF1A1A1A); // Dark gray for cards
+    final textColor = Colors.white; // Always white text
+    final secondaryTextColor = const Color(0xFF94A3B8); // Light gray
+    final primaryColor = const Color(0xFF3B82F6); // Blue accent
     
     final appState = context.watch<AppStateProvider>();
     

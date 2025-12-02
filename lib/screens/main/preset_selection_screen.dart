@@ -77,12 +77,11 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
   
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F7);
-    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
-    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final primaryColor = isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA);
+    final backgroundColor = const Color(0xFF000000); // Always black
+    final surfaceColor = const Color(0xFF1A1A1A); // Dark gray for cards
+    final textColor = Colors.white; // Always white text
+    final secondaryTextColor = const Color(0xFF94A3B8); // Light gray
+    final primaryColor = const Color(0xFF3B82F6); // Blue accent
     
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -182,7 +181,6 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
                                 textColor,
                                 secondaryTextColor,
                                 primaryColor,
-                                isDark,
                               ),
                             );
                           }),
@@ -206,7 +204,6 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
     Color textColor,
     Color secondaryTextColor,
     Color primaryColor,
-    bool isDark,
   ) {
     return _AnimatedPresetCard(
       preset: preset,
@@ -214,7 +211,6 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
       textColor: textColor,
       secondaryTextColor: secondaryTextColor,
       primaryColor: primaryColor,
-      isDark: isDark,
       onTap: () => _handlePresetSelection(context, preset),
     );
   }
@@ -226,7 +222,6 @@ class _AnimatedPresetCard extends StatefulWidget {
   final Color textColor;
   final Color secondaryTextColor;
   final Color primaryColor;
-  final bool isDark;
   final VoidCallback onTap;
 
   const _AnimatedPresetCard({
@@ -235,7 +230,6 @@ class _AnimatedPresetCard extends StatefulWidget {
     required this.textColor,
     required this.secondaryTextColor,
     required this.primaryColor,
-    required this.isDark,
     required this.onTap,
   });
 
@@ -263,33 +257,26 @@ class _AnimatedPresetCardState extends State<_AnimatedPresetCard> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: widget.isDark
-                  ? [
-                      widget.surfaceColor,
-                      widget.surfaceColor.withOpacity(0.8),
-                    ]
-                  : [
-                      Colors.white,
-                      Colors.white.withOpacity(0.9),
-                    ],
+              colors: [
+                widget.surfaceColor,
+                widget.surfaceColor.withOpacity(0.8),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: widget.primaryColor.withOpacity(0.15),
+              color: widget.primaryColor.withOpacity(0.2),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withOpacity(0.15),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
               BoxShadow(
-                color: widget.isDark
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
