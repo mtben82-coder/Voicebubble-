@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "343007612090",
+    "project_id": "voicebubble-52ea5",
+    "storage_bucket": "voicebubble-52ea5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:343007612090:android:e71dd80abe09b4dc664683",
+        "android_client_info": {
+          "package_name": "com.voicebubble.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "343007612090-3bo7v0jneftd8gnpkmrrkcd2q20uc8av.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.voicebubble.app",
+            "certificate_hash": "c4ac8aa6f212e61f9b8fb20fec3c181e7bd0a1e3"
+          }
+        },
+        {
+          "client_id": "343007612090-8t1vprl8l7tm5i8ekg0vag305sjho8m5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3pmcwr-HGXwdfYu2Kg5vLA1d5Pyxo76E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "343007612090-8t1vprl8l7tm5i8ekg0vag305sjho8m5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
