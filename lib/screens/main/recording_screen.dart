@@ -266,7 +266,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                                 height: 160 + (40 * _pulseController.value),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(200),
-                                  color: const Color(0xFFEF4444).withOpacity(
+                                  color: const Color(0xFF3B82F6).withOpacity(
                                     0.2 * (1 - _pulseController.value),
                                   ),
                                 ),

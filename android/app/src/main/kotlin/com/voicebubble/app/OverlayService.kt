@@ -159,8 +159,8 @@ class OverlayService : Service() {
             }
             
             val params = WindowManager.LayoutParams(
-                dpToPx(14), // Fixed width: 14dp - ULTRA tiny! (1/3 of previous 40dp)
-                dpToPx(14), // Fixed height: 14dp - ULTRA tiny!
+                dpToPx(20), // Fixed width: 20dp - perfect size! (half of original 40dp)
+                dpToPx(20), // Fixed height: 20dp - not too big, not too small!
                 layoutType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -190,11 +190,11 @@ class OverlayService : Service() {
     private fun createBubbleView(): View {
         Log.d(TAG, "Creating bubble view...")
         
-        // Create container - ULTRA TINY bubble (14dp - 1/3 of previous 40dp)
+        // Create container - PERFECT SIZE bubble (20dp - half of original 40dp)
         val container = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                dpToPx(14),
-                dpToPx(14)
+                dpToPx(20),
+                dpToPx(20)
             )
         }
         
@@ -215,7 +215,7 @@ class OverlayService : Service() {
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 ).apply {
-                    val padding = dpToPx(3) // Reduced padding for tiny bubble
+                    val padding = dpToPx(5) // Perfect padding for 20dp bubble
                     setMargins(padding, padding, padding, padding)
                 }
                 setImageResource(R.drawable.ic_microphone)
