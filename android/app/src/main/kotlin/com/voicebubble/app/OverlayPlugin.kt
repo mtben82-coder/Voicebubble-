@@ -43,6 +43,8 @@ class OverlayPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 if (checkOverlayPermission()) {
                     context?.let { ctx ->
                         OverlayService.start(ctx)
+                        // Save state for boot persistence
+                        BootReceiver.setOverlayEnabled(ctx, true)
                         result.success(true)
                     } ?: result.success(false)
                 } else {
@@ -52,6 +54,8 @@ class OverlayPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "hideOverlay" -> {
                 context?.let { ctx ->
                     OverlayService.stop(ctx)
+                    // Save state for boot persistence
+                    BootReceiver.setOverlayEnabled(ctx, false)
                     result.success(true)
                 } ?: result.success(false)
             }

@@ -10,6 +10,7 @@ import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import flutter.overlay.window.flutter_overlay_window.FlutterOverlayWindowPlugin
 
 class MainActivity : FlutterActivity() {
 
@@ -96,22 +97,19 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Sends a "triggerOverlay" call to Flutter.
-     * This makes your Flutter bottom-sheet appear.
+     * Show the Flutter overlay window (half-screen popup)
      */
     private fun showFlutterOverlay() {
-        Log.d(TAG, "⚡ Triggering Flutter overlay popup...")
-
-        if (methodChannel == null) {
-            Log.e(TAG, "❌ MethodChannel is NULL — Flutter engine not ready")
-            return
-        }
+        Log.d(TAG, "⚡ Showing Flutter overlay window...")
 
         try {
-            methodChannel!!.invokeMethod("triggerOverlay", null)
-            Log.d(TAG, "✅ 'triggerOverlay' sent to Flutter.")
+            // Show the Flutter overlay window using flutter_overlay_window package
+            FlutterOverlayWindowPlugin.showOverlay(this)
+            
+            Log.d(TAG, "✅ Flutter overlay window shown!")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error sending triggerOverlay", e)
+            Log.e(TAG, "❌ Error showing Flutter overlay window", e)
+            e.printStackTrace()
         }
     }
 }
