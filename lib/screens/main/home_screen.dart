@@ -421,7 +421,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 80),
+                    
+                    // Card 1: Speak to rewrite (ABOVE the mic)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: _AnimatedFeatureCard(
+                        icon: Icons.edit_note_rounded,
+                        text: 'Speak to rewrite or ask anything',
+                        gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 48),
                     
                     // Record Button
                     GestureDetector(
@@ -478,133 +490,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 48),
                     
-                    // Beautiful feature cards
+                    // Card 2: Language support (BELOW the mic)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          // Card 1: Speak to rewrite or ask anything
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF3B82F6).withOpacity(0.15),
-                                  const Color(0xFF2563EB).withOpacity(0.1),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFF3B82F6).withOpacity(0.3),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF3B82F6).withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.auto_awesome,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    'Speak to rewrite or ask anything',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Card 2: Language support
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFF8B5CF6).withOpacity(0.15),
-                                  const Color(0xFF7C3AED).withOpacity(0.1),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFF8B5CF6).withOpacity(0.3),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF8B5CF6).withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.language,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    'Speak in your language, most major languages supported',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      child: _AnimatedFeatureCard(
+                        icon: Icons.language_rounded,
+                        text: 'Speak in your language, most major languages supported',
+                        gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -684,6 +576,124 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Animated Feature Card with classy pulsing glow effect
+class _AnimatedFeatureCard extends StatefulWidget {
+  final IconData icon;
+  final String text;
+  final List<Color> gradientColors;
+
+  const _AnimatedFeatureCard({
+    required this.icon,
+    required this.text,
+    required this.gradientColors,
+  });
+
+  @override
+  State<_AnimatedFeatureCard> createState() => _AnimatedFeatureCardState();
+}
+
+class _AnimatedFeatureCardState extends State<_AnimatedFeatureCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Colors.white;
+
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                widget.gradientColors[0].withOpacity(0.15),
+                widget.gradientColors[1].withOpacity(0.1),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: widget.gradientColors[0].withOpacity(0.3 * _pulseAnimation.value),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.gradientColors[0].withOpacity(0.15 * _pulseAnimation.value),
+                blurRadius: 20 * _pulseAnimation.value,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Animated icon container with glow
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: widget.gradientColors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.gradientColors[0].withOpacity(0.4 * _pulseAnimation.value),
+                      blurRadius: 12 * _pulseAnimation.value,
+                      spreadRadius: 2 * _pulseAnimation.value,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  widget.text,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
