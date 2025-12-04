@@ -16,13 +16,14 @@ import 'screens/paywall/paywall_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
+  // Initialize Firebase - gracefully handle if not configured yet
   try {
     await Firebase.initializeApp();
     debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
-    debugPrint('⚠️ Firebase initialization error: $e');
-    debugPrint('⚠️ App will continue but auth features may not work');
+    debugPrint('⚠️ Firebase not configured yet (google-services.json missing)');
+    debugPrint('⚠️ App will work but auth will be disabled until Firebase is set up');
+    // Don't rethrow - let app continue without Firebase for now
   }
   
   runApp(const MyApp());
