@@ -87,25 +87,13 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       if (mounted) {
-        // Check if it's a Firebase not initialized error
-        final errorMessage = e.toString();
-        if (errorMessage.contains('Firebase') || errorMessage.contains('core/no-app')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('⚠️ Firebase not configured yet. For testing, tap "Skip" below or set up Firebase first.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 5),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) {
