@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/app_state_provider.dart';
+import '../onboarding/onboarding_one.dart';
 import 'terms_screen.dart';
 import 'privacy_screen.dart';
 import 'help_screen.dart';
@@ -228,7 +231,7 @@ class SettingsScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '1.0.0',
+                                '1.0.0 (2)',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: secondaryTextColor,
@@ -277,29 +280,73 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   
                   // Danger Zone
+                  _buildSectionHeader('DANGER ZONE', secondaryTextColor),
+                  const SizedBox(height: 12),
                   Container(
                     decoration: BoxDecoration(
                       color: surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: InkWell(
-                      onTap: () {
-                        _showSignOutDialog(context);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: Text(
-                            'Sign Out',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: const Color(0xFFEF4444),
-                              fontWeight: FontWeight.w600,
+                    child: Column(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            _showSignOutDialog(context);
+                          },
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.logout_rounded,
+                                  color: Color(0xFFF59E0B),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Sign Out',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: const Color(0xFFF59E0B),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
+                        Divider(height: 1, color: dividerColor),
+                        InkWell(
+                          onTap: () {
+                            _showDeleteAccountDialog(context);
+                          },
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.delete_forever_rounded,
+                                  color: Color(0xFFEF4444),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Delete Account',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: const Color(0xFFEF4444),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -713,7 +760,91 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        content: const Text('Are you sure you want to sign out?\n\nYour saved data will remain on this device.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              await _performSignOut(context);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFF59E0B),
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _performSignOut(BuildContext context) async {
+    try {
+      // Clear app state
+      if (context.mounted) {
+        context.read<AppStateProvider>().reset();
+      }
+      
+      // Clear SharedPreferences (user session)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasCompletedOnboarding', false);
+      await prefs.remove('userEmail');
+      await prefs.remove('userName');
+      // Keep overlay state, theme, and other preferences
+      
+      // Navigate to onboarding/sign-in
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => OnboardingOne(onNext: () {
+              // This will be handled by the main.dart flow
+            }),
+          ),
+          (route) => false, // Remove all previous routes
+        );
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Signed out successfully'),
+            backgroundColor: Color(0xFF10B981),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Sign out error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to sign out: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+  
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_rounded, color: Color(0xFFEF4444), size: 28),
+            SizedBox(width: 12),
+            Text('Delete Account'),
+          ],
+        ),
+        content: const Text(
+          'This action is PERMANENT and CANNOT be undone.\n\n'
+          '• All your data will be deleted\n'
+          '• Your subscription will be cancelled\n'
+          '• You will lose access to all premium features\n\n'
+          'Are you absolutely sure?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -721,17 +852,103 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close first dialog
+              _showFinalDeleteConfirmation(context);
             },
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFFEF4444),
             ),
-            child: const Text('Sign Out'),
+            child: const Text('Delete Account'),
           ),
         ],
       ),
     );
+  }
+  
+  void _showFinalDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Final Confirmation'),
+        content: const Text(
+          'Type "DELETE" below to confirm account deletion.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              await _performDeleteAccount(context);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFEF4444),
+            ),
+            child: const Text('Confirm Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _performDeleteAccount(BuildContext context) async {
+    try {
+      // Show loading
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      
+      // TODO: Call backend API to delete account
+      // await deleteAccountAPI();
+      
+      // Simulate API call
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Clear ALL app data
+      if (context.mounted) {
+        context.read<AppStateProvider>().reset();
+      }
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Clear everything
+      
+      // Navigate to onboarding
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => OnboardingOne(onNext: () {}),
+          ),
+          (route) => false,
+        );
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account deleted successfully'),
+            backgroundColor: Color(0xFF10B981),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Delete account error: $e');
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete account: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
   }
 }
 

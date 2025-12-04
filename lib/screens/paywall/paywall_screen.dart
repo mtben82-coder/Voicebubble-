@@ -120,9 +120,9 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
                             const SizedBox(height: 50),
                             // Features
                             _buildFeature(
-                              icon: Icons.all_inclusive_rounded,
-                              title: 'Unlimited Recordings',
-                              subtitle: 'No daily limits, record as much as you want',
+                              icon: Icons.timer_rounded,
+                              title: '90 Minutes Speech-to-Text',
+                              subtitle: '90 minutes of high-quality voice transcription',
                               delay: 0,
                             ),
                             const SizedBox(height: 16),
@@ -204,7 +204,7 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '7-day free trial, then ${_selectedPlan == 'yearly' ? '\$49.99/year' : '\$5.99/month'}',
+                          '1-day free trial, then ${_selectedPlan == 'yearly' ? '\$49.99/year' : '\$5.99/month'}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.white.withOpacity(0.6),
