@@ -83,20 +83,18 @@ class _SplashScreenState extends State<SplashScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OnboardingFlow(
-              onComplete: () async {
+              onComplete: (BuildContext navContext) async {
                 debugPrint('✅ ONBOARDING COMPLETE - Navigating to HomeScreen');
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setBool('hasCompletedOnboarding', true);
                 debugPrint('✅ Saved hasCompletedOnboarding = true');
-                if (mounted) {
-                  debugPrint('✅ Navigating to HomeScreen now...');
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HomeScreen()),
-                  );
-                } else {
-                  debugPrint('❌ ERROR: Context not mounted, cannot navigate');
-                }
+                
+                // Use pushAndRemoveUntil to clear the entire navigation stack
+                debugPrint('✅ Clearing navigation stack and going to HomeScreen...');
+                Navigator.of(navContext).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  (Route<dynamic> route) => false, // Remove all previous routes
+                );
               },
             ),
           ),
@@ -147,7 +145,7 @@ class _SplashScreenState extends State<SplashScreen> {
 }
 
 class OnboardingFlow extends StatefulWidget {
-  final VoidCallback onComplete;
+  final void Function(BuildContext) onComplete;
 
   const OnboardingFlow({super.key, required this.onComplete});
 
@@ -164,7 +162,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _currentStep++;
       });
     } else {
-      widget.onComplete();
+      widget.onComplete(context);
     }
   }
 
@@ -174,7 +172,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   void _closePaywall() {
     debugPrint('🎯 PAYWALL CLOSED - Starting free trial, navigating to HomeScreen');
-    widget.onComplete();
+    widget.onComplete(context);
   }
 
   @override
@@ -194,7 +192,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         return PaywallScreen(
           onSubscribe: () {
             // TODO: Implement subscription
-            widget.onComplete();
+            widget.onComplete(context);
           },
           onRestore: () {
             // TODO: Implement restore
