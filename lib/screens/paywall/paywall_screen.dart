@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:in_app_purchase/in_app_purchase.dart';
-import '../services/subscription_service.dart';
+import '../../services/subscription_service.dart';
 
 class PaywallScreen extends StatefulWidget {
   final VoidCallback onSubscribe;

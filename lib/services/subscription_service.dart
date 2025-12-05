@@ -49,10 +49,9 @@ class SubscriptionService {
     
     // Set up platform-specific configurations
     if (Platform.isAndroid) {
-      // Enable pending purchases on Android
-      final InAppPurchaseAndroidPlatformAddition androidAddition = _iap
-          .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
-      await androidAddition.enablePendingPurchases();
+      // Note: enablePendingPurchases() is deprecated and no longer needed
+      // The newer versions of in_app_purchase_android handle this automatically
+      debugPrint('✅ Android IAP configured (pending purchases handled automatically)');
     }
     
     // Listen for purchase updates
@@ -179,11 +178,9 @@ class SubscriptionService {
     
     if (Platform.isIOS) {
       // iOS receipt validation
-      final AppleParameters? appleParams = purchaseDetails.verificationData.serverVerificationData as AppleParameters?;
-      if (appleParams != null) {
-        debugPrint('📱 iOS receipt: ${appleParams.source}');
-        // TODO: Send to backend for validation with Apple
-      }
+      final String receiptData = purchaseDetails.verificationData.serverVerificationData;
+      debugPrint('📱 iOS receipt data available: ${receiptData.length} characters');
+      // TODO: Send to backend for validation with Apple
     } else if (Platform.isAndroid) {
       // Android receipt validation
       final GooglePlayPurchaseDetails googleDetails = purchaseDetails as GooglePlayPurchaseDetails;
