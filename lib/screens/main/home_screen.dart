@@ -518,10 +518,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Color textColor,
   ) {
     final gradients = {
-      'formal-email': [const Color(0xFF3B82F6), const Color(0xFF06B6D4)],
-      'casual': [const Color(0xFF10B981), const Color(0xFF14B8A6)],
-      'list': [const Color(0xFFF59E0B), const Color(0xFFF97316)],
       'magic': [const Color(0xFF9333EA), const Color(0xFFEC4899)],
+      'email_professional': [const Color(0xFF3B82F6), const Color(0xFF06B6D4)],
+      'email_casual': [const Color(0xFF10B981), const Color(0xFF14B8A6)],
+      'quick_reply': [const Color(0xFFF59E0B), const Color(0xFFF97316)],
+      'dating_opener': [const Color(0xFFEC4899), const Color(0xFFEF4444)],
+      'dating_reply': [const Color(0xFFF472B6), const Color(0xFFEC4899)],
+      'social_viral_caption': [const Color(0xFFEF4444), const Color(0xFFF97316)],
+      'social_viral_video': [const Color(0xFF8B5CF6), const Color(0xFFEC4899)],
+      'rewrite_enhance': [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+      'shorten': [const Color(0xFF10B981), const Color(0xFF059669)],
+      'expand': [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+      'formal_business': [const Color(0xFF1E40AF), const Color(0xFF3B82F6)],
     };
     
     final gradient = gradients[preset.id] ?? [const Color(0xFF9333EA), const Color(0xFFEC4899)];

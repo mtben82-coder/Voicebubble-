@@ -39,12 +39,12 @@ class _OverlayWidgetState extends State<OverlayWidget> with SingleTickerProvider
   late AnimationController _pulseController;
   
   final List<Map<String, dynamic>> _presets = [
-    {'id': 'magic', 'name': 'Magic', 'icon': Icons.auto_fix_high},
-    {'id': 'formal-email', 'name': 'Professional', 'icon': Icons.business_center},
-    {'id': 'casual', 'name': 'Casual', 'icon': Icons.chat_bubble_outline},
-    {'id': 'list', 'name': 'List', 'icon': Icons.list_alt},
-    {'id': 'structured', 'name': 'Structured', 'icon': Icons.checklist},
-    {'id': 'shorter', 'name': 'Shorter', 'icon': Icons.content_cut},
+    {'id': 'magic', 'name': 'Magic', 'icon': Icons.auto_awesome},
+    {'id': 'email_professional', 'name': 'Professional', 'icon': Icons.mail_outline},
+    {'id': 'email_casual', 'name': 'Casual', 'icon': Icons.chat_bubble_outline},
+    {'id': 'quick_reply', 'name': 'Quick Reply', 'icon': Icons.bolt},
+    {'id': 'social_viral_caption', 'name': 'Viral Caption', 'icon': Icons.whatshot},
+    {'id': 'rewrite_enhance', 'name': 'Enhance', 'icon': Icons.edit},
   ];
   
   @override

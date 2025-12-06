@@ -237,8 +237,56 @@ class _AnimatedPresetCard extends StatefulWidget {
   State<_AnimatedPresetCard> createState() => _AnimatedPresetCardState();
 }
 
-class _AnimatedPresetCardState extends State<_AnimatedPresetCard> {
+class _AnimatedPresetCardState extends State<_AnimatedPresetCard>
+    with TickerProviderStateMixin {
   bool _isPressed = false;
+  late AnimationController _shimmerController;
+  late AnimationController _iconPopController;
+  late Animation<double> _iconScaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Shimmer animation (repeating every 2.5 seconds)
+    _shimmerController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    )..repeat();
+    
+    // Icon pop animation on entrance
+    _iconPopController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _iconScaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.08)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.08, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 50,
+      ),
+    ]).animate(_iconPopController);
+    
+    // Trigger icon pop after a short delay
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _iconPopController.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    _iconPopController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -250,99 +298,162 @@ class _AnimatedPresetCardState extends State<_AnimatedPresetCard> {
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0,
+        scale: _isPressed ? 0.95 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                widget.surfaceColor,
-                widget.surfaceColor.withOpacity(0.8),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: widget.primaryColor.withOpacity(0.2),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: widget.primaryColor.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Icon with gradient background
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      widget.primaryColor.withOpacity(0.2),
-                      const Color(0xFFEC4899).withOpacity(0.2),
+        child: AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                // Main card content
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F0F0F).withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.18),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.primaryColor.withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  child: Row(
+                    children: [
+                      // Icon with gradient background and pop animation
+                      AnimatedBuilder(
+                        animation: _iconScaleAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _iconScaleAnimation.value,
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    widget.primaryColor.withOpacity(0.2),
+                                    const Color(0xFFEC4899).withOpacity(0.2),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                widget.preset.icon,
+                                size: 24,
+                                color: widget.primaryColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.preset.name,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                color: widget.textColor,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.preset.description,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: widget.secondaryTextColor,
+                                height: 1.3,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: widget.secondaryTextColor.withOpacity(0.5),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Icon(
-                  widget.preset.icon,
-                  size: 24,
-                  color: widget.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.preset.name,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: widget.textColor,
-                        letterSpacing: -0.3,
+                // Shimmer overlay
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: ShaderMask(
+                      shaderCallback: (bounds) {
+                        return LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(0.03),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.3, 0.5, 0.7],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          transform: _SlidingGradientTransform(
+                            percent: _shimmerController.value,
+                          ),
+                        ).createShader(bounds);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.1),
+                              Colors.transparent,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.preset.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: widget.secondaryTextColor,
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: widget.secondaryTextColor.withOpacity(0.5),
-              ),
-            ],
-          ),
+              ],
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+// Custom gradient transform for shimmer effect
+class _SlidingGradientTransform extends GradientTransform {
+  final double percent;
+
+  const _SlidingGradientTransform({required this.percent});
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(
+      bounds.width * (percent - 0.5) * 2,
+      bounds.height * (percent - 0.5) * 2,
+      0,
     );
   }
 }
