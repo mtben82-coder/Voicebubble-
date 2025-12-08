@@ -151,14 +151,16 @@ class AuthService {
 
       debugPrint('🟢 Firebase sign-in successful: ${userCredential.user?.email}');
 
-      // Create/update user document
-      await _createUserDocument(
+      // Create/update user document (don't wait, do it in background)
+      _createUserDocument(
         uid: userCredential.user!.uid,
         email: userCredential.user!.email!,
         fullName: userCredential.user!.displayName ?? 'User',
-      );
+      ).catchError((e) {
+        debugPrint('⚠️ User document creation failed (non-critical): $e');
+      });
 
-      debugPrint('🟢 User document created/updated');
+      debugPrint('🟢 Sign-in complete, returning user credential');
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -219,10 +221,12 @@ class AuthService {
     required String fullName,
   }) async {
     try {
+      debugPrint('📝 Creating/updating user document for: $email');
       final userDoc = _firestore.collection('users').doc(uid);
       final docSnapshot = await userDoc.get();
 
       if (!docSnapshot.exists) {
+        debugPrint('📝 Creating NEW user document');
         // Create new user document
         await userDoc.set({
           'uid': uid,
@@ -234,14 +238,18 @@ class AuthService {
           'trialStartDate': FieldValue.serverTimestamp(),
           'speechToTextMinutesUsed': 0.0,
         });
+        debugPrint('✅ User document created successfully');
       } else {
+        debugPrint('📝 Updating existing user document');
         // Update last sign in
         await userDoc.update({
           'lastSignIn': FieldValue.serverTimestamp(),
         });
+        debugPrint('✅ User document updated successfully');
       }
     } catch (e) {
-      debugPrint('Error creating user document: $e');
+      debugPrint('⚠️ Error creating user document: $e');
+      debugPrint('⚠️ This is non-critical - user is still authenticated');
       // Don't throw - user is still authenticated
     }
   }
