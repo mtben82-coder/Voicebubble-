@@ -72,12 +72,25 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
+      debugPrint('🔵 UI: Starting Google Sign-In...');
       final res = await _authService.signInWithGoogle();
-      if (res != null) widget.onSignIn();
+      debugPrint('🔵 UI: Sign-In result: ${res != null ? "Success" : "Cancelled"}');
+      
+      if (res != null) {
+        debugPrint('🟢 UI: Calling onSignIn callback');
+        widget.onSignIn();
+      } else {
+        debugPrint('⚪ UI: User cancelled sign-in');
+        // User cancelled - don't show error
+      }
     } catch (e) {
-      _showError(e.toString());
+      debugPrint('🔴 UI: Sign-In error: $e');
+      _showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        debugPrint('🔵 UI: Setting loading to false');
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -287,7 +300,7 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
       onTap: () => setState(() => _isSignUp = !_isSignUp),
       child: Text.rich(
         TextSpan(
-          text: _isSignUp ? 'Already have an account? ' : "Don’t have an account? ",
+          text: _isSignUp ? 'Already have an account? ' : "Don't have an account? ",
           style: TextStyle(color: Colors.white70),
           children: [
             TextSpan(text: _isSignUp ? 'Sign In' : 'Sign Up', style: TextStyle(color: Color(0xFF3B82F6)))
