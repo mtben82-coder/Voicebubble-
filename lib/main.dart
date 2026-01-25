@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/app_state_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/subscription_service.dart';
-import 'screens/main/home_screen.dart';
+import 'screens/main/main_navigation.dart';
 import 'screens/onboarding/onboarding_one.dart';
 import 'screens/onboarding/onboarding_two.dart';
 import 'screens/onboarding/onboarding_three_new.dart';
@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> {
       if (hasCompletedOnboarding) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
       } else {
         Navigator.pushReplacement(
@@ -95,9 +95,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 debugPrint('✅ Saved hasCompletedOnboarding = true');
                 
                 // Use pushAndRemoveUntil to clear the entire navigation stack
-                debugPrint('✅ Clearing navigation stack and going to HomeScreen...');
+                debugPrint('✅ Clearing navigation stack and going to MainNavigation...');
                 Navigator.of(navContext).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  MaterialPageRoute(builder: (context) => const MainNavigation()),
                   (Route<dynamic> route) => false, // Remove all previous routes
                 );
               },
@@ -205,7 +205,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           onClose: _closePaywall,
         );
       default:
-        return const HomeScreen();
+        return const MainNavigation();
     }
   }
 }

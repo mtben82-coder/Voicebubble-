@@ -4,13 +4,19 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
-import '../../models/archived_item.dart';
+import '../../services/refinement_service.dart';
+import '../../models/recording_item.dart';
+import '../../models/outcome_type.dart';
+import '../../widgets/editable_result_box.dart';
+import '../../widgets/outcome_chip.dart';
+import '../../widgets/refinement_buttons.dart';
+import '../../widgets/share_button.dart';
 import 'preset_selection_screen.dart';
 import 'recording_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   const ResultScreen({super.key});
-  
+
   @override
   State<ResultScreen> createState() => _ResultScreenState();
 }
@@ -20,19 +26,29 @@ class _ResultScreenState extends State<ResultScreen> {
   bool _showCopied = false;
   String _rewrittenText = '';
   String? _error;
-  
+
+  // Undo/redo functionality
+  final List<String> _textHistory = [];
+  int _historyIndex = -1;
+
+  // Outcomes (multiple selections allowed)
+  Set<OutcomeType> _selectedOutcomes = {};
+
+  // Active refinement tracking
+  RefinementType? _activeRefinement;
+
   @override
   void initState() {
     super.initState();
     _generateRewrite();
   }
-  
+
   Future<void> _generateRewrite() async {
     final appState = context.read<AppStateProvider>();
     final transcription = appState.transcription;
     final preset = appState.selectedPreset;
     final language = appState.selectedLanguage;
-    
+
     if (transcription.isEmpty || preset == null) {
       setState(() {
         _error = 'No transcription or preset available';
@@ -40,26 +56,32 @@ class _ResultScreenState extends State<ResultScreen> {
       });
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
       _rewrittenText = '';
       _error = null;
     });
-    
+
     try {
       final aiService = AIService();
       final rewrittenText = await aiService.rewriteText(
-        transcription, 
+        transcription,
         preset,
-        language.code, // Pass the selected language code
+        language.code,
       );
-      
+
       setState(() {
         _rewrittenText = rewrittenText;
         _isLoading = false;
       });
-      
+
+      // Initialize history with first result
+      _saveToHistory(rewrittenText);
+
+      // Auto-assign outcome based on preset
+      _autoAssignOutcome(preset.id);
+
       appState.setRewrittenText(rewrittenText);
     } catch (e) {
       setState(() {
@@ -68,43 +90,181 @@ class _ResultScreenState extends State<ResultScreen> {
       });
     }
   }
-  
+
+  void _autoAssignOutcome(String presetId) {
+    // Auto-assign outcome based on preset
+    final outcome = _getOutcomeFromPreset(presetId);
+    setState(() {
+      _selectedOutcomes.add(outcome);
+    });
+  }
+
+  OutcomeType _getOutcomeFromPreset(String presetId) {
+    // Map preset IDs to outcomes
+    if (presetId.contains('email') || presetId.contains('reply') || presetId.contains('message')) {
+      return OutcomeType.message;
+    } else if (presetId.contains('social') || presetId.contains('instagram') || presetId.contains('twitter') || presetId.contains('linkedin') || presetId.contains('viral')) {
+      return OutcomeType.content;
+    } else if (presetId.contains('task') || presetId.contains('todo')) {
+      return OutcomeType.task;
+    } else if (presetId.contains('brain') || presetId.contains('idea') || presetId.contains('story') || presetId.contains('creative')) {
+      return OutcomeType.idea;
+    } else {
+      return OutcomeType.note;
+    }
+  }
+
+  void _saveToHistory(String text) {
+    // Clear forward history if we're in the middle
+    if (_historyIndex < _textHistory.length - 1) {
+      _textHistory.removeRange(_historyIndex + 1, _textHistory.length);
+    }
+    _textHistory.add(text);
+    _historyIndex++;
+    debugPrint('📝 Saved to history: index $_historyIndex, total ${_textHistory.length}');
+  }
+
+  void _undo() {
+    if (_historyIndex > 0) {
+      setState(() {
+        _historyIndex--;
+        _rewrittenText = _textHistory[_historyIndex];
+      });
+      debugPrint('↩️ Undo: index $_historyIndex');
+    }
+  }
+
+  void _redo() {
+    if (_historyIndex < _textHistory.length - 1) {
+      setState(() {
+        _historyIndex++;
+        _rewrittenText = _textHistory[_historyIndex];
+      });
+      debugPrint('↪️ Redo: index $_historyIndex');
+    }
+  }
+
+  void _onTextEdited(String newText) {
+    // User manually edited text
+    setState(() {
+      _rewrittenText = newText;
+    });
+    _saveToHistory(newText);
+    debugPrint('✏️ User edited text');
+  }
+
+  Future<void> _handleRefinement(RefinementType type) async {
+    setState(() {
+      _activeRefinement = type;
+    });
+
+    try {
+      final service = RefinementService();
+      String refined;
+
+      switch (type) {
+        case RefinementType.shorten:
+          refined = await service.shorten(_rewrittenText);
+          break;
+        case RefinementType.expand:
+          refined = await service.expand(_rewrittenText);
+          break;
+        case RefinementType.casual:
+          refined = await service.makeCasual(_rewrittenText);
+          break;
+        case RefinementType.professional:
+          refined = await service.makeProfessional(_rewrittenText);
+          break;
+        case RefinementType.fixGrammar:
+          refined = await service.fixGrammar(_rewrittenText);
+          break;
+        case RefinementType.translate:
+          refined = await service.translate(_rewrittenText, 'en');
+          break;
+      }
+
+      setState(() {
+        _rewrittenText = refined;
+        _activeRefinement = null;
+      });
+
+      _saveToHistory(refined);
+      debugPrint('🎨 Refinement complete: $type');
+    } catch (e) {
+      setState(() {
+        _activeRefinement = null;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refine: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _toggleOutcome(OutcomeType outcome) {
+    setState(() {
+      if (_selectedOutcomes.contains(outcome)) {
+        _selectedOutcomes.remove(outcome);
+      } else {
+        _selectedOutcomes.add(outcome);
+      }
+    });
+    debugPrint('🏷️ Outcomes: $_selectedOutcomes');
+  }
+
+  Future<void> _saveRecording() async {
+    final appState = context.read<AppStateProvider>();
+
+    // Create new RecordingItem
+    final item = RecordingItem(
+      id: const Uuid().v4(),
+      rawTranscript: appState.transcription,
+      finalText: _rewrittenText,
+      presetUsed: appState.selectedPreset?.name ?? 'Unknown',
+      outcomes: _selectedOutcomes.map((o) => o.toStorageString()).toList(),
+      projectId: null,
+      createdAt: DateTime.now(),
+      editHistory: List.from(_textHistory),
+      presetId: appState.selectedPreset?.id ?? '',
+    );
+
+    await appState.saveRecording(item);
+    debugPrint('💾 Recording saved: ${item.id}');
+  }
+
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: _rewrittenText));
-    
-    // Save to archive
-    final appState = context.read<AppStateProvider>();
-    final item = ArchivedItem(
-      id: const Uuid().v4(),
-      presetName: appState.selectedPreset!.name,
-      originalText: appState.transcription,
-      rewrittenText: _rewrittenText,
-      timestamp: DateTime.now(),
-    );
-    
-    await appState.saveToArchive(item);
-    
+
+    // Save recording
+    await _saveRecording();
+
     setState(() {
       _showCopied = true;
     });
-    
+
     await Future.delayed(const Duration(milliseconds: 1500));
-    
+
     if (mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = const Color(0xFF000000); // Always black
-    final surfaceColor = const Color(0xFF1A1A1A); // Dark gray for cards
-    final textColor = Colors.white; // Always white text
-    final secondaryTextColor = const Color(0xFF94A3B8); // Light gray
-    final primaryColor = const Color(0xFF3B82F6); // Blue accent
-    
+    final backgroundColor = const Color(0xFF000000);
+    final surfaceColor = const Color(0xFF1A1A1A);
+    final textColor = Colors.white;
+    final secondaryTextColor = const Color(0xFF94A3B8);
+    final primaryColor = const Color(0xFF3B82F6);
+
     final appState = context.watch<AppStateProvider>();
-    
+    final canUndo = _historyIndex > 0;
+    final canRedo = _historyIndex < _textHistory.length - 1;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
@@ -140,13 +300,27 @@ class _ResultScreenState extends State<ResultScreen> {
                           icon: Icon(Icons.close, color: textColor, size: 20),
                         ),
                       ),
-                      Text(
-                        'Result',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
+                      Row(
+                        children: [
+                          // Undo button
+                          IconButton(
+                            onPressed: canUndo ? _undo : null,
+                            icon: Icon(
+                              Icons.undo,
+                              color: canUndo ? textColor : secondaryTextColor.withOpacity(0.3),
+                              size: 20,
+                            ),
+                          ),
+                          // Redo button
+                          IconButton(
+                            onPressed: canRedo ? _redo : null,
+                            icon: Icon(
+                              Icons.redo,
+                              color: canRedo ? textColor : secondaryTextColor.withOpacity(0.3),
+                              size: 20,
+                            ),
+                          ),
+                        ],
                       ),
                       TextButton(
                         onPressed: () {
@@ -169,7 +343,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Content
                 Expanded(
                   child: SingleChildScrollView(
@@ -204,8 +378,8 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
-                        // Rewritten
+
+                        // Preset label
                         Row(
                           children: [
                             Text(
@@ -219,7 +393,8 @@ class _ResultScreenState extends State<ResultScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        
+
+                        // Editable Result Box
                         if (_isLoading)
                           Container(
                             width: double.infinity,
@@ -262,37 +437,58 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                           )
                         else
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  primaryColor.withOpacity(0.1),
-                                  const Color(0xFF2563EB).withOpacity(0.1),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: primaryColor.withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: Text(
-                              _rewrittenText,
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: textColor,
-                                height: 1.6,
-                              ),
+                          EditableResultBox(
+                            initialText: _rewrittenText,
+                            onTextChanged: _onTextEdited,
+                            isLoading: _activeRefinement != null,
+                          ),
+
+                        const SizedBox(height: 24),
+
+                        // Refinement Buttons
+                        if (!_isLoading && _error == null) ...[
+                          RefinementButtons(
+                            currentText: _rewrittenText,
+                            onRefinementComplete: (refined) {
+                              setState(() {
+                                _rewrittenText = refined;
+                              });
+                              _saveToHistory(refined);
+                            },
+                            activeRefinement: _activeRefinement,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Outcomes Section
+                          Text(
+                            'Outcomes (tap to toggle)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: secondaryTextColor,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        const SizedBox(height: 24),
-                        
-                        // Action Buttons
-                        if (!_isLoading && _error == null) ...[
+                          const SizedBox(height: 12),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: OutcomeType.values.map((outcome) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: OutcomeChip(
+                                    outcomeType: outcome,
+                                    isSelected: _selectedOutcomes.contains(outcome),
+                                    onTap: () => _toggleOutcome(outcome),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Action Buttons
+                          ShareButton(textToShare: _rewrittenText),
+                          const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -364,7 +560,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
               ],
             ),
-            
+
             // Copied notification
             if (_showCopied)
               Positioned(
@@ -414,4 +610,3 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 }
-
