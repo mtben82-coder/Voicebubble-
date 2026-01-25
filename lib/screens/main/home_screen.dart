@@ -6,6 +6,8 @@ import '../../constants/presets.dart';
 import '../../constants/languages.dart';
 import '../../models/preset.dart';
 import '../../services/native_overlay_service.dart';
+import '../../widgets/continue_banner.dart';
+import '../../widgets/language_selector_popup.dart';
 import '../main/recording_screen.dart';
 import '../main/preset_selection_screen.dart';
 import '../main/vault_screen.dart';
@@ -203,7 +205,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Continue Banner (if context exists)
+            const ContinueBanner(),
+            
+            // Main Content
+            Expanded(
+              child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
@@ -479,7 +488,77 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 40),
                     
-                    // Card 1: Speak to rewrite (BELOW the mic)
+                    // Language Selector Button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Consumer<AppStateProvider>(
+                        builder: (context, appState, _) {
+                          final language = appState.selectedLanguage;
+                          final primaryColor = const Color(0xFF3B82F6);
+                          return GestureDetector(
+                            onTap: () async {
+                              await showDialog(
+                                context: context,
+                                builder: (context) => const LanguageSelectorPopup(),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: surfaceColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: primaryColor.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    language.flagEmoji,
+                                    style: const TextStyle(fontSize: 32),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Output Language',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: secondaryTextColor,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          language.name,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 16,
+                                    color: secondaryTextColor,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Card 1: Speak to rewrite (BELOW the language selector)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: _AnimatedFeatureCard(
@@ -504,8 +583,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ],
                 ),
               ),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

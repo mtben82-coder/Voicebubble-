@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/archived_item.dart';
 import '../models/recording_item.dart';
+import '../models/project.dart';
+import '../models/continue_context.dart';
 import '../models/preset.dart';
 import '../constants/languages.dart';
 import '../services/subscription_service.dart';
@@ -15,6 +17,8 @@ class AppStateProvider extends ChangeNotifier {
   bool _isProcessing = false;
   List<ArchivedItem> _archivedItems = [];
   List<RecordingItem> _recordingItems = [];
+  List<Project> _projects = [];
+  ContinueContext? _continueContext;
   bool _isPremium = false;
   DateTime? _subscriptionExpiry;
   String? _subscriptionType; // 'monthly' or 'yearly'
@@ -28,6 +32,8 @@ class AppStateProvider extends ChangeNotifier {
   bool get isProcessing => _isProcessing;
   List<ArchivedItem> get archivedItems => _archivedItems;
   List<RecordingItem> get recordingItems => _recordingItems;
+  List<Project> get projects => _projects;
+  ContinueContext? get continueContext => _continueContext;
   bool get isPremium => _isPremium;
   DateTime? get subscriptionExpiry => _subscriptionExpiry;
   String? get subscriptionType => _subscriptionType;
@@ -36,6 +42,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> initialize() async {
     await _loadArchivedItems();
     await _loadRecordingItems();
+    await _loadProjects();
     await checkSubscriptionStatus();
   }
   
@@ -76,6 +83,13 @@ class AppStateProvider extends ChangeNotifier {
     final box = await Hive.openBox<RecordingItem>('recording_items');
     _recordingItems = box.values.toList();
     _recordingItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    notifyListeners();
+  }
+  
+  Future<void> _loadProjects() async {
+    final box = await Hive.openBox<Project>('projects');
+    _projects = box.values.toList();
+    _projects.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     notifyListeners();
   }
   
@@ -182,6 +196,64 @@ class AppStateProvider extends ChangeNotifier {
     await recordingBox.clear();
     _recordingItems = [];
     
+    final projectBox = await Hive.openBox<Project>('projects');
+    await projectBox.clear();
+    _projects = [];
+    
+    notifyListeners();
+  }
+  
+  // Project management methods
+  Future<void> saveProject(Project project) async {
+    final box = await Hive.openBox<Project>('projects');
+    await box.put(project.id, project);
+    await _loadProjects();
+    notifyListeners();
+  }
+  
+  Future<void> deleteProject(String id) async {
+    final box = await Hive.openBox<Project>('projects');
+    await box.delete(id);
+    await _loadProjects();
+    notifyListeners();
+  }
+  
+  Future<void> addItemToProject(String projectId, String itemId) async {
+    final projectBox = await Hive.openBox<Project>('projects');
+    final project = projectBox.get(projectId);
+    
+    if (project != null && !project.itemIds.contains(itemId)) {
+      final updatedProject = project.copyWith(
+        itemIds: [...project.itemIds, itemId],
+        updatedAt: DateTime.now(),
+      );
+      await projectBox.put(projectId, updatedProject);
+      
+      // Update recording item
+      final recordingBox = await Hive.openBox<RecordingItem>('recording_items');
+      for (final key in recordingBox.keys) {
+        final item = recordingBox.get(key);
+        if (item?.id == itemId) {
+          final updatedItem = item!.copyWith(projectId: projectId);
+          await recordingBox.put(key, updatedItem);
+          break;
+        }
+      }
+      
+      await _loadProjects();
+      await _loadRecordingItems();
+      notifyListeners();
+    }
+  }
+  
+  // Continue context management
+  void setContinueContext(ContinueContext? context) {
+    _continueContext = context;
+    notifyListeners();
+  }
+  
+  void clearContinueContext() {
+    _continueContext = null;
     notifyListeners();
   }
   

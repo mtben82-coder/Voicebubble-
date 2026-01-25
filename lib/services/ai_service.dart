@@ -68,5 +68,36 @@ class AIService {
       throw Exception('Failed to rewrite text: $e');
     }
   }
+  
+  /// Rewrite text with context for continuation flow
+  Future<String> rewriteWithContext({
+    required String text,
+    required Preset preset,
+    required String languageCode,
+    List<String>? contextTexts,
+  }) async {
+    try {
+      final Map<String, dynamic> requestData = {
+        'text': text,
+        'presetId': preset.id,
+        'language': languageCode,
+      };
+
+      // Add context if provided
+      if (contextTexts != null && contextTexts.isNotEmpty) {
+        requestData['context'] = contextTexts;
+      }
+
+      final response = await _dio.post(
+        '$_backendUrl/api/rewrite/batch',
+        data: requestData,
+      );
+      
+      return response.data['text'] ?? '';
+    } catch (e) {
+      print('Rewrite with context error: $e');
+      throw Exception('Failed to rewrite text with context: $e');
+    }
+  }
 }
 

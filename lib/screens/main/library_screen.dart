@@ -5,6 +5,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../providers/app_state_provider.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/outcome_chip.dart';
+import '../../widgets/project_card.dart';
+import '../../widgets/create_project_dialog.dart';
+import 'project_detail_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -374,49 +377,95 @@ class _LibraryScreenState extends State<LibraryScreen> {
     Color secondaryTextColor,
     Color primaryColor,
   ) {
-    // Projects will be implemented in Task 3
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primaryColor.withOpacity(0.2),
-                  primaryColor.withOpacity(0.1),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, _) {
+        final projects = appState.projects;
+
+        return Stack(
+          children: [
+            if (projects.isEmpty)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryColor.withOpacity(0.2),
+                            primaryColor.withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.folder_outlined,
+                        size: 64,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Projects Yet',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create a project to organize recordings',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ListView.builder(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
+                itemCount: projects.length,
+                itemBuilder: (context, index) {
+                  final project = projects[index];
+                  return ProjectCard(
+                    project: project,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProjectDetailScreen(
+                            projectId: project.id,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
-              borderRadius: BorderRadius.circular(16),
+            // FAB for creating new project
+            Positioned(
+              right: 24,
+              bottom: 24,
+              child: FloatingActionButton(
+                onPressed: () async {
+                  await showDialog(
+                    context: context,
+                    builder: (context) => const CreateProjectDialog(),
+                  );
+                },
+                backgroundColor: primaryColor,
+                child: Icon(Icons.add, color: textColor),
+              ),
             ),
-            child: Icon(
-              Icons.folder_outlined,
-              size: 64,
-              color: primaryColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Projects Coming Soon',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Group your recordings into projects',
-            style: TextStyle(
-              fontSize: 14,
-              color: secondaryTextColor,
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

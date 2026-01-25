@@ -2,11 +2,13 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/archived_item.dart';
 import '../models/recording_item.dart';
+import '../models/project.dart';
 
 class StorageService {
   static const String _onboardingCompleteKey = 'onboarding_complete';
   static const String _archivedItemsBoxName = 'archived_items';
   static const String _recordingItemsBoxName = 'recording_items';
+  static const String _projectsBoxName = 'projects';
   
   /// Initialize Hive and register adapters
   static Future<void> initialize() async {
@@ -18,6 +20,9 @@ class StorageService {
     }
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(RecordingItemAdapter());
+    }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter(ProjectAdapter());
     }
   }
   
@@ -61,6 +66,11 @@ class StorageService {
     
     if (Hive.isBoxOpen(_recordingItemsBoxName)) {
       final box = Hive.box<RecordingItem>(_recordingItemsBoxName);
+      await box.clear();
+    }
+    
+    if (Hive.isBoxOpen(_projectsBoxName)) {
+      final box = Hive.box<Project>(_projectsBoxName);
       await box.clear();
     }
   }

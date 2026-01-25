@@ -32,6 +32,12 @@ class RecordingItem {
   @HiveField(8)
   String presetId; // For backend API
 
+  @HiveField(9)
+  String? continuedFromId; // Link to previous item in continuation chain
+
+  @HiveField(10)
+  List<String> continuedInIds; // Items that built on this one
+
   RecordingItem({
     required this.id,
     required this.rawTranscript,
@@ -42,7 +48,9 @@ class RecordingItem {
     required this.createdAt,
     required this.editHistory,
     required this.presetId,
-  });
+    this.continuedFromId,
+    List<String>? continuedInIds,
+  }) : continuedInIds = continuedInIds ?? [];
 
   // Helper getter to convert string outcomes to enum list
   List<OutcomeType> get outcomeTypes {
@@ -83,6 +91,8 @@ class RecordingItem {
     DateTime? createdAt,
     List<String>? editHistory,
     String? presetId,
+    String? continuedFromId,
+    List<String>? continuedInIds,
   }) {
     return RecordingItem(
       id: id ?? this.id,
@@ -94,6 +104,8 @@ class RecordingItem {
       createdAt: createdAt ?? this.createdAt,
       editHistory: editHistory ?? List.from(this.editHistory),
       presetId: presetId ?? this.presetId,
+      continuedFromId: continuedFromId ?? this.continuedFromId,
+      continuedInIds: continuedInIds ?? List.from(this.continuedInIds),
     );
   }
 }

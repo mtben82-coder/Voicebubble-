@@ -11,6 +11,7 @@ import '../../widgets/editable_result_box.dart';
 import '../../widgets/outcome_chip.dart';
 import '../../widgets/refinement_buttons.dart';
 import '../../widgets/share_button.dart';
+import '../../widgets/add_to_project_dialog.dart';
 import 'preset_selection_screen.dart';
 import 'recording_screen.dart';
 
@@ -485,6 +486,64 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
+
+                          // Add to Project Button
+                          GestureDetector(
+                            onTap: () async {
+                              // Save first if not saved yet
+                              await _saveRecording();
+                              
+                              // Get the item ID
+                              final appState = context.read<AppStateProvider>();
+                              final items = appState.recordingItems;
+                              if (items.isNotEmpty) {
+                                final latestItem = items.first;
+                                showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: Colors.transparent,
+                                  isScrollControlled: true,
+                                  builder: (context) => AddToProjectDialog(
+                                    recordingItemId: latestItem.id,
+                                  ),
+                                );
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: surfaceColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: primaryColor.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.folder_outlined,
+                                    color: primaryColor,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Add to Project',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
 
                           // Action Buttons
                           ShareButton(textToShare: _rewrittenText),
