@@ -35,6 +35,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   
   // Timer
   Timer? _timer;
+  Timer? _waveTimer;
   int _recordingSeconds = 0;
   int _recordingMilliseconds = 0;
   
@@ -42,6 +43,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   final int _waveBarCount = 50;
   List<double> _waveHeights = [];
   double _currentSoundLevel = 0.0;
+  double _targetSoundLevel = 0.3;
   final Random _random = Random();
   
   // App colors
@@ -63,6 +65,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   void dispose() {
     _pulseController.dispose();
     _timer?.cancel();
+    _waveTimer?.cancel();
     _speech.stop();
     _audioRecorder.dispose();
     super.dispose();
@@ -77,6 +80,27 @@ class _RecordingScreenState extends State<RecordingScreen>
             _recordingMilliseconds = 0;
             _recordingSeconds++;
           }
+        });
+      }
+    });
+  }
+  
+  void _startWaveAnimation() {
+    _waveTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!_isPaused && mounted) {
+        setState(() {
+          // Smoothly interpolate toward target sound level
+          _currentSoundLevel = _currentSoundLevel * 0.7 + _targetSoundLevel * 0.3;
+          
+          // Shift all bars to the left
+          for (int i = 0; i < _waveHeights.length - 1; i++) {
+            _waveHeights[i] = _waveHeights[i + 1];
+          }
+          
+          // Generate new bar on the right with variation based on sound level
+          final baseHeight = _currentSoundLevel * 0.6 + 0.1;
+          final variation = _random.nextDouble() * 0.3 * _currentSoundLevel;
+          _waveHeights[_waveHeights.length - 1] = (baseHeight + variation).clamp(0.08, 1.0);
         });
       }
     });
@@ -137,11 +161,9 @@ class _RecordingScreenState extends State<RecordingScreen>
         pauseFor: const Duration(seconds: 30), // Don't auto-stop
         partialResults: true,
         onSoundLevelChange: (level) {
-          // Update sound waves based on audio level
-          _currentSoundLevel = level;
-          if (!_isPaused) {
-            _updateWaveHeights(level);
-          }
+          // Update target sound level - the wave animation timer will smoothly animate toward this
+          final normalizedLevel = ((level.clamp(-2, 10) + 2) / 12).clamp(0.2, 1.0);
+          _targetSoundLevel = normalizedLevel;
         },
         cancelOnError: false,
         listenFor: const Duration(minutes: 5), // Max 5 minutes
@@ -152,6 +174,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       });
       
       _startTimer();
+      _startWaveAnimation();
 
       print('Recording started: $_audioPath');
     } catch (e) {
@@ -177,6 +200,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   
   Future<void> _cancelRecording() async {
     _timer?.cancel();
+    _waveTimer?.cancel();
     await _speech.stop();
     await _audioRecorder.stop();
     
@@ -193,6 +217,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     });
     
     _timer?.cancel();
+    _waveTimer?.cancel();
 
     try {
       // Stop live speech
@@ -361,64 +386,94 @@ class _RecordingScreenState extends State<RecordingScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Cancel button
-                  GestureDetector(
-                    onTap: _cancelRecording,
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF2A2A2A),
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 32),
-                  
-                  // Stop button (red circle with white square)
-                  GestureDetector(
-                    onTap: _stopRecording,
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _primaryBlue,
-                      ),
-                      child: Center(
+                  Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _cancelRecording,
                         child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
+                          width: 64,
+                          height: 64,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFF2A2A2A),
+                          ),
+                          child: const Icon(
+                            Icons.close,
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
+                            size: 28,
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 32),
+                  
+                  // Stop button (blue circle with white square)
+                  Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _stopRecording,
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _primaryBlue,
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const SizedBox(height: 14), // Match spacing with other labels
+                    ],
                   ),
                   const SizedBox(width: 32),
                   
                   // Pause button
-                  GestureDetector(
-                    onTap: _pauseRecording,
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF2A2A2A),
+                  Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _pauseRecording,
+                        child: Container(
+                          width: 64,
+                          height: 64,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFF2A2A2A),
+                          ),
+                          child: Icon(
+                            _isPaused ? Icons.play_arrow : Icons.pause,
+                            color: _isPaused ? _primaryBlue : Colors.white,
+                            size: 28,
+                          ),
+                        ),
                       ),
-                      child: Icon(
-                        _isPaused ? Icons.play_arrow : Icons.pause,
-                        color: _isPaused ? _primaryBlue : Colors.white,
-                        size: 28,
+                      const SizedBox(height: 8),
+                      Text(
+                        _isPaused ? 'Resume' : 'Pause',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
