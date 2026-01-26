@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/outcome_type.dart';
 import '../../models/recording_item.dart';
+import 'recording_detail_screen.dart';
 
 class OutcomeDetailScreen extends StatefulWidget {
   final OutcomeType outcomeType;
@@ -256,70 +257,128 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: gradientColors[0].withOpacity(isCompleted ? 0.1 : 0.3),
-            width: 1,
+      child: GestureDetector(
+        onTap: () {
+          // Navigate to detail screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecordingDetailScreen(
+                recordingId: item.id,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: gradientColors[0].withOpacity(isCompleted ? 0.1 : 0.3),
+              width: 1,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Task checkbox + Preset name row
-            Row(
-              children: [
-                if (isTask) ...[
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Task checkbox + Preset name + Done button row
+              Row(
+                children: [
+                  if (isTask) ...[
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _completedTasks[item.id] = !isCompleted;
+                        });
+                        // TODO: Save completion state to database
+                      },
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: isCompleted
+                              ? LinearGradient(
+                                  colors: gradientColors,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : null,
+                          border: Border.all(
+                            color: isCompleted ? Colors.transparent : gradientColors[0],
+                            width: 2,
+                          ),
+                        ),
+                        child: isCompleted
+                            ? const Icon(
+                                Icons.check,
+                                size: 18,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Text(
+                      item.presetUsed,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: gradientColors[0],
+                      ),
+                    ),
+                  ),
+                  // Done button on top right
                   GestureDetector(
                     onTap: () {
                       setState(() {
                         _completedTasks[item.id] = !isCompleted;
                       });
-                      // TODO: Save completion state to database
                     },
                     child: Container(
-                      width: 28,
-                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: isCompleted
-                            ? LinearGradient(
-                                colors: gradientColors,
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
+                        color: isCompleted 
+                            ? const Color(0xFF10B981).withOpacity(0.15)
+                            : gradientColors[0].withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isCompleted ? Colors.transparent : gradientColors[0],
-                          width: 2,
+                          color: isCompleted 
+                              ? const Color(0xFF10B981)
+                              : gradientColors[0],
+                          width: 1,
                         ),
                       ),
-                      child: isCompleted
-                          ? const Icon(
-                              Icons.check,
-                              size: 18,
-                              color: Colors.white,
-                            )
-                          : null,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                            size: 14,
+                            color: isCompleted 
+                                ? const Color(0xFF10B981)
+                                : gradientColors[0],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isCompleted ? 'Done' : 'Mark',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isCompleted 
+                                  ? const Color(0xFF10B981)
+                                  : gradientColors[0],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
                 ],
-                Expanded(
-                  child: Text(
-                    item.presetUsed,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: gradientColors[0],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
             const SizedBox(height: 8),
 
             // Content preview
