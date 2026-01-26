@@ -482,45 +482,47 @@ class _AnimatedPresetCardState extends State<_AnimatedPresetCard>
                         ],
                       ),
                     ),
-                // Shimmer overlay
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: ShaderMask(
-                      shaderCallback: (bounds) {
-                        return LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            presetColors[0].withOpacity(0.08),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.3, 0.5, 0.7],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          transform: _SlidingGradientTransform(
-                            percent: _shimmerController.value,
-                          ),
-                        ).createShader(bounds);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: LinearGradient(
-                            colors: [
-                              presetColors[1].withOpacity(0.05),
-                              Colors.transparent,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                    // Shimmer overlay
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: ShaderMask(
+                          shaderCallback: (bounds) {
+                            return LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                presetColors[0].withOpacity(0.08),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.3, 0.5, 0.7],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              transform: _SlidingGradientTransform(
+                                percent: _shimmerController.value,
+                              ),
+                            ).createShader(bounds);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                colors: [
+                                  presetColors[1].withOpacity(0.05),
+                                  Colors.transparent,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
-            );
-          },
+                  ],
+                );
+              },
+            ),
+          ),
         ),
         // Star icon positioned on top - separate gesture detector
         Positioned(
@@ -566,4 +568,3 @@ class _SlidingGradientTransform extends GradientTransform {
     );
   }
 }
-
