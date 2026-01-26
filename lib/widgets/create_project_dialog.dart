@@ -212,8 +212,13 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   }
 
   void _createProject() async {
+    debugPrint('🏗️ _createProject called');
+    
     final name = _nameController.text.trim();
+    debugPrint('🏗️ Project name: "$name"');
+    
     if (name.isEmpty) {
+      debugPrint('❌ Name is empty, showing error');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a project name'),
@@ -224,6 +229,9 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
     }
 
     final description = _descriptionController.text.trim();
+    debugPrint('🏗️ Description: "$description"');
+    debugPrint('🏗️ Selected color index: $_selectedColorIndex');
+    
     final appState = context.read<AppStateProvider>();
 
     final now = DateTime.now();
@@ -237,16 +245,34 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       colorIndex: _selectedColorIndex,
     );
 
-    await appState.saveProject(project);
+    debugPrint('🏗️ Created project object: ${project.id}');
+    debugPrint('🏗️ Calling appState.saveProject...');
+    
+    try {
+      await appState.saveProject(project);
+      debugPrint('✅ Project saved successfully!');
 
-    if (mounted) {
-      Navigator.pop(context, project);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Created "$name"'),
-          backgroundColor: const Color(0xFF10B981),
-        ),
-      );
+      if (mounted) {
+        Navigator.pop(context, project);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Created "$name"'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ ERROR saving project: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating project: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 }
