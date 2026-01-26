@@ -19,6 +19,8 @@ class OutcomeDetailScreen extends StatefulWidget {
 }
 
 class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
+  String _searchQuery = '';
+
   List<Color> _getGradientColors() {
     switch (widget.outcomeType) {
       case OutcomeType.message:
@@ -46,7 +48,7 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
     final today = DateTime.now();
     final yesterday = today.subtract(const Duration(days: 1));
     
-    final todayItems = widget.items.where((item) {
+    final todayItems = filteredItems.where((item) {
       return item.createdAt.year == today.year &&
           item.createdAt.month == today.month &&
           item.createdAt.day == today.day;
@@ -58,7 +60,7 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
           item.createdAt.day == yesterday.day;
     }).toList();
 
-    final olderItems = widget.items.where((item) {
+    final olderItems = filteredItems.where((item) {
       return !todayItems.contains(item) && !yesterdayItems.contains(item);
     }).toList();
 
@@ -122,6 +124,37 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
             ),
 
             const SizedBox(height: 16),
+
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextField(
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
+                  style: TextStyle(color: textColor, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: 'Search ${widget.outcomeType.displayName.toLowerCase()}...',
+                    hintStyle: TextStyle(color: secondaryTextColor),
+                    prefixIcon: Icon(Icons.search, color: secondaryTextColor),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
 
             // Items List
             Expanded(

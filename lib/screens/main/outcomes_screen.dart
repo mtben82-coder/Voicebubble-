@@ -4,6 +4,7 @@ import '../../providers/app_state_provider.dart';
 import '../../models/outcome_type.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/outcome_card.dart';
+import '../../widgets/preset_filter_chips.dart';
 import 'outcome_detail_screen.dart';
 
 class OutcomesScreen extends StatefulWidget {
@@ -14,7 +15,6 @@ class OutcomesScreen extends StatefulWidget {
 }
 
 class _OutcomesScreenState extends State<OutcomesScreen> {
-  String _searchQuery = '';
   String? _selectedPresetId;
 
   @override
@@ -148,17 +148,8 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                     );
                   }
 
-                  // Filter recordings based on search and preset
+                  // Filter recordings based on preset only
                   var filteredRecordings = recordings;
-                  
-                  // Apply search filter
-                  if (_searchQuery.isNotEmpty) {
-                    filteredRecordings = filteredRecordings.where((r) {
-                      return r.finalText.toLowerCase().contains(_searchQuery) ||
-                          r.presetUsed.toLowerCase().contains(_searchQuery) ||
-                          r.outcomes.any((o) => o.toLowerCase().contains(_searchQuery));
-                    }).toList();
-                  }
                   
                   // Apply preset filter
                   if (_selectedPresetId != null) {

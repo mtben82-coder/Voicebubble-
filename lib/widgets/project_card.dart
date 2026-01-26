@@ -31,8 +31,12 @@ class ProjectCard extends StatelessWidget {
     final textColor = Colors.white;
     final secondaryTextColor = const Color(0xFF94A3B8);
 
-    return GestureDetector(
-      onTap: onTap,
+    return InkWell(
+      onTap: () {
+        print('🔵 Project card tapped: ${project.name} (${project.id})');
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(20),

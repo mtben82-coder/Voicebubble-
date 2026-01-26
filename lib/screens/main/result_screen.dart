@@ -16,7 +16,12 @@ import 'preset_selection_screen.dart';
 import 'recording_screen.dart';
 
 class ResultScreen extends StatefulWidget {
-  const ResultScreen({super.key});
+  final String? continueFromItemId;
+  
+  const ResultScreen({
+    super.key,
+    this.continueFromItemId,
+  });
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -52,6 +57,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final transcription = appState.transcription;
     final preset = appState.selectedPreset;
     final language = appState.selectedLanguage;
+    final continueContext = appState.continueContext;
 
     if (transcription.isEmpty || preset == null) {
       setState(() {
@@ -69,11 +75,38 @@ class _ResultScreenState extends State<ResultScreen> {
 
     try {
       final aiService = AIService();
-      final rewrittenText = await aiService.rewriteText(
-        transcription,
-        preset,
-        language.code,
-      );
+      String rewrittenText;
+      
+      // Check if we're continuing from an existing item
+      if (continueContext != null && continueContext.contextTexts.isNotEmpty) {
+        // Use context-aware rewriting
+        print('🔄 Using context-aware rewriting with ${continueContext.contextTexts.length} context items');
+        rewrittenText = await aiService.rewriteWithContext(
+          text: transcription,
+          preset: preset,
+          languageCode: language.code,
+          contextTexts: continueContext.contextTexts,
+        );
+        
+        // If continuing a single item, load existing outcomes
+        if (continueContext.singleItemId != null) {
+          final existingItem = appState.recordingItems.firstWhere(
+            (item) => item.id == continueContext.singleItemId,
+            orElse: () => appState.recordingItems.first,
+          );
+          // Preserve existing outcomes
+          setState(() {
+            _selectedOutcomes = existingItem.outcomeTypes.toSet();
+          });
+        }
+      } else {
+        // Normal rewriting
+        rewrittenText = await aiService.rewriteText(
+          transcription,
+          preset,
+          language.code,
+        );
+      }
 
       setState(() {
         _rewrittenText = rewrittenText;
@@ -83,13 +116,21 @@ class _ResultScreenState extends State<ResultScreen> {
       // Initialize history with first result
       _saveToHistory(rewrittenText);
 
-      // Auto-assign outcome based on preset
-      _autoAssignOutcome(preset.id);
+      // Don't auto-assign outcome - let user choose
+      // _autoAssignOutcome(preset.id);
 
       appState.setRewrittenText(rewrittenText);
       
-      // 🔥 ACTUALLY SAVE THE RECORDING TO DATABASE!
-      await _saveRecording();
+      // Save or update the recording
+      if (_savedItemId != null) {
+        // Update existing item
+        await _updateExistingItem();
+        // Clear continue context after updating
+        appState.clearContinueContext();
+      } else {
+        // Create new item
+        await _saveRecording();
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();

@@ -5,8 +5,10 @@ import 'package:share_plus/share_plus.dart';
 import '../../providers/app_state_provider.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/outcome_chip.dart';
+import '../../widgets/preset_chip.dart';
 import '../../widgets/add_to_project_dialog.dart';
 import '../../services/continue_service.dart';
+import '../../constants/presets.dart';
 import 'recording_screen.dart';
 
 class RecordingDetailScreen extends StatelessWidget {
@@ -91,41 +93,28 @@ class RecordingDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Outcome chips
-                        if (item.outcomes.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: item.outcomeTypes.map((outcome) {
+                        // Chips: Preset chip (large) + Outcome chips (smaller)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            // Preset chip - FIRST and prominent
+                            if (AppPresets.findById(item.presetId) != null)
+                              PresetChip(
+                                preset: AppPresets.findById(item.presetId)!,
+                                isLarge: true,
+                              ),
+                            
+                            // Outcome chips - SECOND and smaller
+                            if (item.outcomes.isNotEmpty)
+                              ...item.outcomeTypes.map((outcome) {
                                 return OutcomeChip(
                                   outcomeType: outcome,
                                   isSelected: true,
                                   onTap: () {}, // Read-only
                                 );
                               }).toList(),
-                            ),
-                          ),
-
-                        // Preset label
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            item.presetUsed,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: primaryColor,
-                            ),
-                          ),
+                          ],
                         ),
 
                         const SizedBox(height: 16),

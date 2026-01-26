@@ -8,10 +8,12 @@ import 'result_screen.dart';
 
 class PresetSelectionScreen extends StatefulWidget {
   final bool fromRecording;
-  
+  final String? continueFromItemId;
+
   const PresetSelectionScreen({
     super.key,
     this.fromRecording = false,
+    this.continueFromItemId,
   });
 
   @override

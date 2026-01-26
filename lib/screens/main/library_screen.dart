@@ -5,9 +5,11 @@ import 'package:share_plus/share_plus.dart';
 import '../../providers/app_state_provider.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/outcome_chip.dart';
+import '../../widgets/preset_chip.dart';
 import '../../widgets/project_card.dart';
 import '../../widgets/create_project_dialog.dart';
 import '../../widgets/preset_filter_chips.dart';
+import '../../constants/presets.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 
@@ -312,33 +314,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Outcome chips
-              if (item.outcomes.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: item.outcomeTypes.map((outcome) {
+              // Chips row: Preset chip (large) + Outcome chips (smaller)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  // Preset chip - FIRST and prominent
+                  if (AppPresets.findById(item.presetId) != null)
+                    PresetChip(
+                      preset: AppPresets.findById(item.presetId)!,
+                      isLarge: true,
+                    ),
+                  
+                  // Outcome chips - SECOND and smaller
+                  if (item.outcomes.isNotEmpty)
+                    ...item.outcomeTypes.map((outcome) {
                       return OutcomeChip(
                         outcomeType: outcome,
                         isSelected: true,
                         onTap: () {}, // Read-only in library view
                       );
                     }).toList(),
-                  ),
-                ),
-
-              // Preset name
-              Text(
-                item.presetUsed,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF3B82F6),
-                ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
               // Content
               Text(
