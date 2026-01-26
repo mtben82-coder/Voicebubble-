@@ -40,10 +40,15 @@ class AppStateProvider extends ChangeNotifier {
   
   // Initialize and load archived items from Hive
   Future<void> initialize() async {
-    await _loadArchivedItems();
-    await _loadRecordingItems();
-    await _loadProjects();
-    await checkSubscriptionStatus();
+    // Make sure we wait for everything to load before returning
+    try {
+      await _loadArchivedItems();
+      await _loadRecordingItems();
+      await _loadProjects();
+      await checkSubscriptionStatus();
+    } catch (e) {
+      debugPrint('ERROR in initialize: $e');
+    }
   }
   
   /// Check and update subscription status from Firebase

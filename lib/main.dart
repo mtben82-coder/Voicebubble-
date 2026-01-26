@@ -41,7 +41,12 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => AppStateProvider()..initialize(), // INITIALIZE APP STATE
+          create: (_) {
+            final provider = AppStateProvider();
+            // Initialize in the background, don't block UI
+            provider.initialize();
+            return provider;
+          },
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
