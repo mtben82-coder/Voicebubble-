@@ -196,13 +196,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Tag Filter Chips
+                      // Tag Filter Chips (moved up)
                       if (!_showProjects)
                         TagFilterChips(
                           selectedTagId: _selectedTagId,
                           onTagSelected: (tagId) => setState(() => _selectedTagId = tagId),
                         ),
-                      const SizedBox(height: 24),
+                      if (!_showProjects) const SizedBox(height: 16),
+                      if (_showProjects) const SizedBox(height: 8),
 
                       // Content based on mode
                       if (_showProjects) ...[
