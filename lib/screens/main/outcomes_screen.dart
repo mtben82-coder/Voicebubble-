@@ -15,6 +15,7 @@ class OutcomesScreen extends StatefulWidget {
 
 class _OutcomesScreenState extends State<OutcomesScreen> {
   String _searchQuery = '';
+  String? _selectedPresetId;
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +94,21 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
               ),
             ),
 
+            const SizedBox(height: 16),
+
+            // Preset Filter Chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: PresetFilterChips(
+                selectedPresetId: _selectedPresetId,
+                onPresetSelected: (presetId) {
+                  setState(() {
+                    _selectedPresetId = presetId;
+                  });
+                },
+              ),
+            ),
+
             const SizedBox(height: 24),
 
             // Outcome Groups
@@ -132,14 +148,24 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                     );
                   }
 
-                  // Filter recordings based on search
-                  final filteredRecordings = _searchQuery.isEmpty
-                      ? recordings
-                      : recordings.where((r) {
-                          return r.finalText.toLowerCase().contains(_searchQuery) ||
-                              r.presetUsed.toLowerCase().contains(_searchQuery) ||
-                              r.outcomes.any((o) => o.toLowerCase().contains(_searchQuery));
-                        }).toList();
+                  // Filter recordings based on search and preset
+                  var filteredRecordings = recordings;
+                  
+                  // Apply search filter
+                  if (_searchQuery.isNotEmpty) {
+                    filteredRecordings = filteredRecordings.where((r) {
+                      return r.finalText.toLowerCase().contains(_searchQuery) ||
+                          r.presetUsed.toLowerCase().contains(_searchQuery) ||
+                          r.outcomes.any((o) => o.toLowerCase().contains(_searchQuery));
+                    }).toList();
+                  }
+                  
+                  // Apply preset filter
+                  if (_selectedPresetId != null) {
+                    filteredRecordings = filteredRecordings.where((r) {
+                      return r.presetId == _selectedPresetId;
+                    }).toList();
+                  }
 
                   // Group recordings by outcome
                   final outcomeGroups = <OutcomeType, List<RecordingItem>>{};

@@ -19,8 +19,6 @@ class OutcomeDetailScreen extends StatefulWidget {
 }
 
 class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
-  String _searchQuery = '';
-
   List<Color> _getGradientColors() {
     switch (widget.outcomeType) {
       case OutcomeType.message:
@@ -44,31 +42,23 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
     final secondaryTextColor = const Color(0xFF94A3B8);
     final gradientColors = _getGradientColors();
 
-    // Filter items based on search
-    final filteredItems = _searchQuery.isEmpty
-        ? widget.items
-        : widget.items.where((item) {
-            return item.finalText.toLowerCase().contains(_searchQuery) ||
-                item.presetUsed.toLowerCase().contains(_searchQuery);
-          }).toList();
-
     // Group by date
     final today = DateTime.now();
     final yesterday = today.subtract(const Duration(days: 1));
     
-    final todayItems = filteredItems.where((item) {
+    final todayItems = widget.items.where((item) {
       return item.createdAt.year == today.year &&
           item.createdAt.month == today.month &&
           item.createdAt.day == today.day;
     }).toList();
 
-    final yesterdayItems = filteredItems.where((item) {
+    final yesterdayItems = widget.items.where((item) {
       return item.createdAt.year == yesterday.year &&
           item.createdAt.month == yesterday.month &&
           item.createdAt.day == yesterday.day;
     }).toList();
 
-    final olderItems = filteredItems.where((item) {
+    final olderItems = widget.items.where((item) {
       return !todayItems.contains(item) && !yesterdayItems.contains(item);
     }).toList();
 
@@ -131,36 +121,7 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
               ),
             ),
 
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: TextField(
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                  style: TextStyle(color: textColor, fontSize: 16),
-                  decoration: InputDecoration(
-                    hintText: 'Search ${widget.outcomeType.displayName.toLowerCase()}...',
-                    hintStyle: TextStyle(color: secondaryTextColor),
-                    prefixIcon: Icon(Icons.search, color: secondaryTextColor),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // Items List
             Expanded(

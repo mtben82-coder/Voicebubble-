@@ -7,6 +7,7 @@ import '../../models/recording_item.dart';
 import '../../widgets/outcome_chip.dart';
 import '../../widgets/project_card.dart';
 import '../../widgets/create_project_dialog.dart';
+import '../../widgets/preset_filter_chips.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 
@@ -20,6 +21,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   bool _showProjects = false; // false = All, true = Projects
   String _searchQuery = '';
+  String? _selectedPresetId;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +169,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Preset Filter Chips (only show in "All" view)
+            if (!_showProjects)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: PresetFilterChips(
+                  selectedPresetId: _selectedPresetId,
+                  onPresetSelected: (presetId) {
+                    setState(() {
+                      _selectedPresetId = presetId;
+                    });
+                  },
+                ),
+              ),
+
+            if (!_showProjects) const SizedBox(height: 24),
 
             // Content
             Expanded(
@@ -230,13 +248,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
           );
         }
 
-        // Filter recordings based on search
-        final filteredRecordings = _searchQuery.isEmpty
-            ? recordings
-            : recordings.where((r) {
-                return r.finalText.toLowerCase().contains(_searchQuery) ||
-                    r.presetUsed.toLowerCase().contains(_searchQuery);
-              }).toList();
+        // Filter recordings based on search and preset
+        var filteredRecordings = recordings;
+        
+        // Apply search filter
+        if (_searchQuery.isNotEmpty) {
+          filteredRecordings = filteredRecordings.where((r) {
+            return r.finalText.toLowerCase().contains(_searchQuery) ||
+                r.presetUsed.toLowerCase().contains(_searchQuery);
+          }).toList();
+        }
+        
+        // Apply preset filter
+        if (_selectedPresetId != null) {
+          filteredRecordings = filteredRecordings.where((r) {
+            return r.presetId == _selectedPresetId;
+          }).toList();
+        }
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 24),
