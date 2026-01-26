@@ -14,9 +14,9 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 1; // Start on Record (middle)
 
   final List<Widget> _screens = const [
-    LibraryScreen(),
-    HomeScreen(),
-    OutcomesScreen(),
+    LibraryScreen(),    // Index 0
+    HomeScreen(),       // Index 1 (Record)
+    OutcomesScreen(),   // Index 2
   ];
 
   @override
@@ -47,9 +47,17 @@ class _MainNavigationState extends State<MainNavigation> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(
+                  icon: Icons.library_books,
+                  label: 'Library',
+                  index: 0,
+                  primaryColor: primaryColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                _buildNavItem(
                   icon: Icons.mic,
                   label: 'Record',
-                  index: 0,
+                  index: 1,
                   primaryColor: primaryColor,
                   textColor: textColor,
                   secondaryTextColor: secondaryTextColor,
@@ -57,14 +65,6 @@ class _MainNavigationState extends State<MainNavigation> {
                 _buildNavItem(
                   icon: Icons.dashboard,
                   label: 'Outcomes',
-                  index: 1,
-                  primaryColor: primaryColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                ),
-                _buildNavItem(
-                  icon: Icons.library_books,
-                  label: 'Library',
                   index: 2,
                   primaryColor: primaryColor,
                   textColor: textColor,
