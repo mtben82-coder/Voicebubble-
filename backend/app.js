@@ -12,15 +12,6 @@ import subscriptionRoutes from "./routes/subscription.js";
 
 import { AppError, globalErrorHandler } from "./utils/errors.js";
 
-// Try to import extract routes (optional - may not exist in older deploys)
-let extractRoutes;
-try {
-  const module = await import("./routes/extract.js");
-  extractRoutes = module.default;
-} catch (err) {
-  console.warn("⚠️ Extract routes not available:", err.message);
-}
-
 const app = express();
 
 // ========= MIDDLEWARE =========
@@ -69,7 +60,17 @@ app.get("/stats", (req, res) => {
 app.use("/api/rewrite", rewriteRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/subscription", subscriptionRoutes);
-app.use("/api/extract", extractRoutes);
+
+// Try to load extract routes dynamically (optional for backwards compatibility)
+(async () => {
+  try {
+    const { default: extractRoutes } = await import("./routes/extract.js");
+    app.use("/api/extract", extractRoutes);
+    console.log("✅ Extract routes registered");
+  } catch (err) {
+    console.warn("⚠️ Extract routes not available:", err.message);
+  }
+})();
 
 // ========= 404 HANDLER =========
 app.all("*", (req, res, next) => {
