@@ -9,9 +9,17 @@ import rateLimit from "express-rate-limit";
 import rewriteRoutes from "./routes/rewrite.js";
 import transcribeRoutes from "./routes/transcribe.js";
 import subscriptionRoutes from "./routes/subscription.js";
-import extractRoutes from "./routes/extract.js";
 
 import { AppError, globalErrorHandler } from "./utils/errors.js";
+
+// Try to import extract routes (optional - may not exist in older deploys)
+let extractRoutes;
+try {
+  const module = await import("./routes/extract.js");
+  extractRoutes = module.default;
+} catch (err) {
+  console.warn("⚠️ Extract routes not available:", err.message);
+}
 
 const app = express();
 
