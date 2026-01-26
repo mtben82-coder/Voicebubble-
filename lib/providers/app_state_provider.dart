@@ -80,10 +80,16 @@ class AppStateProvider extends ChangeNotifier {
   }
   
   Future<void> _loadRecordingItems() async {
-    final box = await Hive.openBox<RecordingItem>('recording_items');
-    _recordingItems = box.values.toList();
-    _recordingItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    notifyListeners();
+    try {
+      final box = await Hive.openBox<RecordingItem>('recording_items');
+      _recordingItems = box.values.toList();
+      _recordingItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      debugPrint('📚 Loaded ${_recordingItems.length} recording items from Hive');
+      notifyListeners();
+    } catch (e, stackTrace) {
+      debugPrint('❌ ERROR in _loadRecordingItems: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+    }
   }
   
   Future<void> _loadProjects() async {
