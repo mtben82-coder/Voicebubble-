@@ -364,129 +364,124 @@ class _AnimatedPresetCardState extends State<_AnimatedPresetCard>
     final mainColor = widget.preset.color ?? widget.primaryColor;
     final presetColors = [mainColor, mainColor.withOpacity(0.7)];
     
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutCubic,
-        child: AnimatedBuilder(
-          animation: Listenable.merge([_shimmerController, _glowController]),
-          builder: (context, child) {
-            return Stack(
-              children: [
-                // Main card content
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F0F0F).withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: presetColors[0].withOpacity(0.25),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: presetColors[0].withOpacity(_glowAnimation.value * 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 1,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Icon with animated gradient background and pop animation
-                      AnimatedBuilder(
-                        animation: _iconScaleAnimation,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: _iconScaleAnimation.value,
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    presetColors[0].withOpacity(0.85),
-                                    presetColors[1].withOpacity(0.85),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: presetColors[0].withOpacity(_glowAnimation.value),
-                                    blurRadius: 12,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                widget.preset.icon,
-                                size: 24,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.preset.name,
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: widget.textColor,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.preset.description,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: widget.secondaryTextColor,
-                                height: 1.3,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+    return Stack(
+      children: [
+        // Main card with GestureDetector
+        GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) {
+            setState(() => _isPressed = false);
+            widget.onTap();
+          },
+          onTapCancel: () => setState(() => _isPressed = false),
+          child: AnimatedScale(
+            scale: _isPressed ? 0.95 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_shimmerController, _glowController]),
+              builder: (context, child) {
+                return Stack(
+                  children: [
+                    // Main card content
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F0F0F).withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: presetColors[0].withOpacity(0.25),
+                          width: 1,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Star icon
-                      GestureDetector(
-                        onTap: widget.onToggleFavorite,
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            widget.isFavorite ? Icons.star : Icons.star_border,
-                            size: 24,
-                            color: widget.isFavorite 
-                                ? const Color(0xFFFBBF24) // Golden yellow
-                                : widget.secondaryTextColor.withOpacity(0.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: presetColors[0].withOpacity(_glowAnimation.value * 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                            spreadRadius: 1,
                           ),
-                        ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      Icon(
+                      child: Row(
+                        children: [
+                          // Icon with animated gradient background and pop animation
+                          AnimatedBuilder(
+                            animation: _iconScaleAnimation,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: _iconScaleAnimation.value,
+                                child: Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        presetColors[0].withOpacity(0.85),
+                                        presetColors[1].withOpacity(0.85),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: presetColors[0].withOpacity(_glowAnimation.value),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    widget.preset.icon,
+                                    size: 24,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.preset.name,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                    color: widget.textColor,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.preset.description,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: widget.secondaryTextColor,
+                                    height: 1.3,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 60), // Space for star icon
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: widget.secondaryTextColor.withOpacity(0.5),
+                          ),
+                        ],
+                      ),
+                    ),
                         Icons.arrow_forward_ios,
                         size: 16,
                         color: widget.secondaryTextColor.withOpacity(0.5),
