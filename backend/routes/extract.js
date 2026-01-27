@@ -1,7 +1,7 @@
 // backend/routes/extract.js
 
 import express from "express";
-import { extractOutcomes, extractUnstuck } from "../controllers/extractcontroller.js";
+import { extractOutcomes, extractUnstuck } from "../controllers/extractController.js";
 
 const router = express.Router();
 
