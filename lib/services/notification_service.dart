@@ -1,61 +1,8 @@
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-const String _reminderPrefix = 'reminder_';
-
-// SINGLE GLOBAL INSTANCE
-final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-
-/// MUST be top-level function
-@pragma('vm:entry-point')
-Future<void> alarmCallback(int id) async {
-  WidgetsFlutterBinding.ensureInitialized();
-  debugPrint('⏰ ALARM FIRED: $id');
-
-  final prefs = await SharedPreferences.getInstance();
-  final data = prefs.getString('$_reminderPrefix$id');
-  if (data == null) {
-    debugPrint('❌ No data for alarm $id');
-    return;
-  }
-
-  await prefs.remove('$_reminderPrefix$id');
-  final json = jsonDecode(data);
-
-  // Initialize plugin in isolate
-  await _notificationsPlugin.initialize(
-    const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
-  );
-
-  await _notificationsPlugin.show(
-    id,
-    json['title'],
-    json['body'],
-    NotificationDetails(
-      android: AndroidNotificationDetails(
-        'voicebubble_reminders_v2',
-        'Reminders',
-        importance: Importance.max,
-        priority: Priority.max,
-        enableVibration: true,
-        playSound: true,
-        visibility: NotificationVisibility.public,
-        vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
-      ),
-    ),
-    payload: json['itemId'],
-  );
-  debugPrint('✅ Notification shown');
-}
 
 class ReminderResult {
   final bool success;
@@ -65,52 +12,100 @@ class ReminderResult {
   ReminderResult.failure(this.error) : success = false, notificationId = null;
 }
 
+/// EXACT copy of FitnessOS WorkoutAlarmService pattern
 class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-  NotificationService._internal();
+  static final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
 
-  bool _initialized = false;
+  static const String _channelId = 'voicebubble_reminders';
+  static const String _channelName = 'Reminders';
+  static const String _channelDescription = 'Reminder notifications';
 
+  /// Initialize - MUST be called from main()
   Future<void> initialize() async {
-    if (_initialized) return;
-
-    tz.initializeTimeZones();
-    try {
-      final timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
-    } catch (e) {
-      tz.setLocalLocation(tz.UTC);
+    if (_initialized) {
+      debugPrint('⚠️ NotificationService already initialized');
+      return;
     }
 
-    await AndroidAlarmManager.initialize();
+    try {
+      debugPrint('🔧 Initializing NotificationService...');
 
-    await _notificationsPlugin.initialize(
-      const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
-    );
+      // Initialize timezone
+      tz.initializeTimeZones();
+      try {
+        final timeZoneName = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+        debugPrint('🕐 Timezone: $timeZoneName');
+      } catch (e) {
+        tz.setLocalLocation(tz.UTC);
+      }
 
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-          'voicebubble_reminders_v2',
-          'Reminders',
-          importance: Importance.max,
-          enableVibration: true,
-          playSound: true,
-        ));
+      // Initialize notification plugin
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initSettings = InitializationSettings(android: androidInit);
 
-    _initialized = true;
-    debugPrint('✅ NotificationService initialized');
+      await _notifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
+      debugPrint('✅ Notification plugin initialized');
+
+      // Get Android plugin for platform-specific setup
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidPlugin != null) {
+        // Request notification permission (Android 13+)
+        final notifGranted = await androidPlugin.requestNotificationsPermission();
+        debugPrint('📱 Notification permission granted: $notifGranted');
+
+        // Request exact alarm permission (Android 12+)
+        final alarmGranted = await androidPlugin.requestExactAlarmsPermission();
+        debugPrint('⏰ Exact alarm permission granted: $alarmGranted');
+
+        // Create notification channel with MAX PRIORITY
+        await androidPlugin.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _channelId,
+            _channelName,
+            description: _channelDescription,
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+            enableLights: true,
+          ),
+        );
+        debugPrint('✅ Notification channel created');
+      }
+
+      _initialized = true;
+      debugPrint('🎉 NotificationService fully initialized!');
+    } catch (e, stack) {
+      debugPrint('❌ NotificationService initialization failed: $e');
+      debugPrint('Stack: $stack');
+    }
+  }
+
+  static void _onNotificationTapped(NotificationResponse response) {
+    debugPrint('🔔 Notification tapped: ${response.payload}');
   }
 
   Future<bool> requestPermission() async {
-    final status = await Permission.notification.request();
-    if (!status.isGranted) return false;
-    await Permission.scheduleExactAlarm.request();
-    await Permission.ignoreBatteryOptimizations.request();
-    return true;
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      final granted = await androidPlugin.requestNotificationsPermission();
+      await androidPlugin.requestExactAlarmsPermission();
+      return granted ?? false;
+    }
+    return false;
   }
 
+  /// Schedule a reminder using zonedSchedule (same as FitnessOS)
   Future<ReminderResult> scheduleReminder({
     required String itemId,
     required String title,
@@ -123,62 +118,70 @@ class NotificationService {
       return ReminderResult.failure('Cannot schedule in the past');
     }
 
-    if (!await Permission.notification.isGranted) {
-      if (!await requestPermission()) {
-        return ReminderResult.failure('Permission denied');
-      }
-    }
-
     final int notificationId = itemId.hashCode.abs() % 2147483647;
-    await AndroidAlarmManager.cancel(notificationId);
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_reminderPrefix$notificationId', jsonEncode({
-      'title': title,
-      'body': body.length > 200 ? '${body.substring(0, 197)}...' : body,
-      'itemId': itemId,
-    }));
+    // Cancel existing
+    await _notifications.cancel(notificationId);
 
-    final scheduled = await AndroidAlarmManager.oneShotAt(
-      scheduledTime,
-      notificationId,
-      alarmCallback,
-      exact: true,
-      wakeup: true,
-      rescheduleOnReboot: true,
-      allowWhileIdle: true,
-    );
+    try {
+      final tz.TZDateTime tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    if (scheduled) {
-      debugPrint('🔔 Scheduled for $scheduledTime (ID: $notificationId)');
+      debugPrint('📅 Scheduling reminder:');
+      debugPrint('   - ID: $notificationId');
+      debugPrint('   - Time: $tzScheduledTime');
+
+      await _notifications.zonedSchedule(
+        notificationId,
+        title,
+        body.length > 200 ? '${body.substring(0, 197)}...' : body,
+        tzScheduledTime,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
+            enableVibration: true,
+            visibility: NotificationVisibility.public,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: itemId,
+      );
+
+      debugPrint('✅ Reminder scheduled successfully');
       return ReminderResult.success(notificationId);
+    } catch (e) {
+      debugPrint('❌ Failed to schedule: $e');
+      return ReminderResult.failure('Failed to schedule: $e');
     }
-    return ReminderResult.failure('Failed to schedule');
   }
 
   Future<void> cancelReminder(int notificationId) async {
-    await AndroidAlarmManager.cancel(notificationId);
-    await _notificationsPlugin.cancel(notificationId);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('$_reminderPrefix$notificationId');
+    await _notifications.cancel(notificationId);
+    debugPrint('🔕 Cancelled reminder $notificationId');
   }
 
   Future<void> cancelReminderByItemId(String itemId) async {
     await cancelReminder(itemId.hashCode.abs() % 2147483647);
   }
 
-  /// Call this to test if notifications work at all
+  /// Test notification - shows immediately
   Future<void> testNotificationNow() async {
     if (!_initialized) await initialize();
 
-    await _notificationsPlugin.show(
+    await _notifications.show(
       99999,
-      '🔔 Test',
-      'Notifications work!',
+      '🔔 Test Notification',
+      'If you see this, notifications work!',
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'voicebubble_reminders_v2',
-          'Reminders',
+          _channelId,
+          _channelName,
           importance: Importance.max,
           priority: Priority.max,
           playSound: true,
