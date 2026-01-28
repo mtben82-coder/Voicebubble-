@@ -255,8 +255,11 @@ export function buildMessages({ presetId, userText, language = "auto" }) {
     }
   ];
 
-  // Add few-shot examples if available
-  if (Array.isArray(preset.examples) && preset.examples.length > 0) {
+  // 🔥 FIX: Only add examples if language is English or auto
+  // English examples confuse the model when outputting other languages
+  const useExamples = !language || language === "auto" || language === "en";
+  
+  if (useExamples && Array.isArray(preset.examples) && preset.examples.length > 0) {
     for (const example of preset.examples) {
       if (!example || !example.input || !example.output) continue;
       
