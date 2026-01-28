@@ -299,45 +299,44 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Task checkbox + Preset name row (no Done button)
+              // Checkbox + Preset name row + Reminder button
               Row(
                 children: [
-                  if (isTask) ...[
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _completedTasks[item.id] = !isCompleted;
-                        });
-                        // TODO: Save completion state to database
-                      },
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: isCompleted
-                              ? LinearGradient(
-                                  colors: gradientColors,
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                )
-                              : null,
-                          border: Border.all(
-                            color: isCompleted ? Colors.transparent : gradientColors[0],
-                            width: 2,
-                          ),
-                        ),
-                        child: isCompleted
-                            ? const Icon(
-                                Icons.check,
-                                size: 18,
-                                color: Colors.white,
+                  // Completion checkbox for ALL outcome types
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _completedTasks[item.id] = !isCompleted;
+                      });
+                      // TODO: Save completion state to database
+                    },
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: isCompleted
+                            ? LinearGradient(
+                                colors: gradientColors,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               )
                             : null,
+                        border: Border.all(
+                          color: isCompleted ? Colors.transparent : gradientColors[0],
+                          width: 2,
+                        ),
                       ),
+                      child: isCompleted
+                          ? const Icon(
+                              Icons.check,
+                              size: 18,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
-                    const SizedBox(width: 12),
-                  ],
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       item.presetUsed,
@@ -348,14 +347,12 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
                       ),
                     ),
                   ),
-                  // Reminder button for tasks
-                  if (isTask) ...[
-                    ReminderButton(
-                      reminderDateTime: item.reminderDateTime,
-                      onPressed: () => _showReminderPicker(item),
-                      compact: true,
-                    ),
-                  ],
+                  // Reminder button for ALL outcome types
+                  ReminderButton(
+                    reminderDateTime: item.reminderDateTime,
+                    onPressed: () => _showReminderPicker(item),
+                    compact: true,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
