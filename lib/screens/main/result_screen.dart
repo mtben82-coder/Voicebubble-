@@ -420,70 +420,20 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
   
-  /// Show dialog to add more text and regenerate with AI
-  Future<void> _showAddMoreDialog(BuildContext context) async {
-    final textController = TextEditingController();
-    
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1F1F1F),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Add More',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Add text or instructions, AI will rewrite the whole thing:',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: textController,
-              autofocus: true,
-              maxLines: 3,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'e.g., "make it funnier" or "add a conclusion"',
-                hintStyle: const TextStyle(color: Color(0xFF64748B)),
-                filled: true,
-                fillColor: const Color(0xFF2D2D2D),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (textController.text.trim().isNotEmpty) {
-                Navigator.pop(context, textController.text.trim());
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Rewrite'),
-          ),
-        ],
+  /// Show voice recording for instructions
+  Future<void> _showInstructionsVoiceRecording(BuildContext context) async {
+    // Navigate to recording screen for instructions
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const RecordingScreen(isInstructionsMode: true),
       ),
-    );
-    
-    if (result != null && result.isNotEmpty) {
-      await _addMoreAndRewrite(result);
-    }
+    ).then((instructionsText) async {
+      // When they come back with voice instructions
+      if (instructionsText != null && instructionsText is String && instructionsText.isNotEmpty) {
+        await _addMoreAndRewrite(instructionsText);
+      }
+    });
   }
   
   /// Add user text and regenerate with AI
@@ -811,10 +761,10 @@ class _ResultScreenState extends State<ResultScreen> {
                         // Add More and Rewrite buttons (right under output box)
                         Row(
                           children: [
-                            // Add More Button (live refinement)
+                            // Instructions Button (voice-based)
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () => _showAddMoreDialog(context),
+                                onPressed: () => _showInstructionsVoiceRecording(context),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: primaryColor,
                                   side: BorderSide(color: primaryColor, width: 2),
@@ -826,10 +776,10 @@ class _ResultScreenState extends State<ResultScreen> {
                                 child: const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_circle_outline, size: 18),
+                                    Icon(Icons.add, size: 18),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Add More',
+                                      'Instructions',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,

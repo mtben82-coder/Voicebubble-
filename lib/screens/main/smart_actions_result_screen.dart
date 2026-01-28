@@ -221,12 +221,12 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFF000000), // Black background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black87),
+          icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () {
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
@@ -234,7 +234,7 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
         title: const Text(
           'Smart Actions',
           style: TextStyle(
-            color: Colors.black87,
+            color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -245,12 +245,12 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
+                  CircularProgressIndicator(color: Color(0xFF3B82F6)),
                   SizedBox(height: 16),
                   Text(
                     'Detecting actions...',
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: Colors.white70,
                       fontSize: 16,
                     ),
                   ),
@@ -275,17 +275,21 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _errorMessage ?? 'Unknown error',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.black54),
+                          style: const TextStyle(color: Colors.white70),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _extractActions,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3B82F6),
+                          ),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -302,7 +306,7 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
                             Icon(
                               Icons.search_off,
                               size: 64,
-                              color: Colors.black26,
+                              color: Colors.white24,
                             ),
                             SizedBox(height: 16),
                             Text(
@@ -310,13 +314,14 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               ),
                             ),
                             SizedBox(height: 8),
                             Text(
                               'Try speaking about tasks, events, or messages',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.black54),
+                              style: TextStyle(color: Colors.white70),
                             ),
                           ],
                         ),
@@ -490,14 +495,14 @@ class _SmartActionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: const Color(0xFF2D2D2D),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     action.formattedText,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.black87,
+                      color: Colors.white,
                       height: 1.5,
                     ),
                   ),
@@ -580,19 +585,19 @@ class _MetadataChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: const Color(0xFF2D2D2D),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.black54),
+          Icon(icon, size: 14, color: Colors.white70),
           const SizedBox(width: 4),
           Text(
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: Colors.black54,
+              color: Colors.white70,
               fontWeight: FontWeight.w500,
             ),
           ),
