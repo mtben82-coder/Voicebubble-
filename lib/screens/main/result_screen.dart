@@ -19,6 +19,7 @@ import 'preset_selection_screen.dart';
 import 'recording_screen.dart';
 import 'outcomes_result_screen.dart';
 import 'unstuck_result_screen.dart';
+import 'smart_actions_result_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   final String? continueFromItemId;
@@ -455,6 +456,13 @@ class _ResultScreenState extends State<ResultScreen> {
     if (preset?.id == 'unstuck') {
       return UnstuckResultScreen(
         continueFromItemId: widget.continueFromItemId,
+      );
+    }
+    
+    if (preset?.id == 'smart_actions') {
+      return SmartActionsResultScreen(
+        transcription: appState.transcription,
+        languageCode: appState.selectedLanguage,
       );
     }
     

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/preset.dart';
 import '../models/extracted_outcome.dart';
 import '../models/unstuck_response.dart';
+import '../models/smart_action.dart';
 import '../models/outcome_type.dart';
 
 class AIService {
@@ -149,6 +150,24 @@ class AIService {
     } catch (e) {
       print('Extract unstuck error: $e');
       throw Exception('Failed to extract unstuck: $e');
+    }
+  }
+
+  /// Extract smart actions from text
+  Future<SmartActionsResponse> extractSmartActions(String text, String languageCode) async {
+    try {
+      final response = await _dio.post(
+        '$_backendUrl/api/extract/actions',
+        data: {
+          'text': text,
+          'language': languageCode,
+        },
+      );
+      
+      return SmartActionsResponse.fromJson(response.data);
+    } catch (e) {
+      print('Extract smart actions error: $e');
+      throw Exception('Failed to extract smart actions: $e');
     }
   }
 }
