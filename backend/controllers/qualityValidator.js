@@ -14,6 +14,22 @@
 import { createChatCompletion } from "../services/openaiService.js";
 
 // ============================================================
+// LANGUAGE MAPPING
+// ============================================================
+
+const LANGUAGE_NAMES = {
+  "en": "English", "es": "Spanish", "fr": "French", "de": "German",
+  "it": "Italian", "pt": "Portuguese", "ru": "Russian", "ja": "Japanese",
+  "ko": "Korean", "zh": "Chinese", "ar": "Arabic", "hi": "Hindi",
+  "fa": "Farsi (Persian)", "tr": "Turkish", "vi": "Vietnamese",
+  "nl": "Dutch", "pl": "Polish", "uk": "Ukrainian", "he": "Hebrew"
+};
+
+function getLanguageName(code) {
+  return LANGUAGE_NAMES[code] || "English";
+}
+
+// ============================================================
 // QUALITY RULES BY PRESET CATEGORY
 // ============================================================
 
@@ -307,13 +323,20 @@ Just output the fixed version. Nothing else.`;
  * @param {string} presetId - The preset used
  * @param {string} originalInput - Original user input
  * @param {string[]} issues - List of issues found
+ * @param {string} language - Language code (e.g., "es", "fr")
  * @returns {Promise<string>} Improved output
  */
-export async function enhanceOutput(output, presetId, originalInput, issues) {
+export async function enhanceOutput(output, presetId, originalInput, issues, language = "auto") {
   const issueList = issues.join("\n- ");
   
+  // Add language instruction if non-English
+  const languageName = language && language !== "auto" ? getLanguageName(language) : null;
+  const languageInstruction = languageName 
+    ? `\n\n⚠️ CRITICAL: Write your corrected output ENTIRELY in ${languageName}. Every word must be in ${languageName}.`
+    : "";
+  
   const messages = [
-    { role: "system", content: CORRECTION_SYSTEM_PROMPT },
+    { role: "system", content: CORRECTION_SYSTEM_PROMPT + languageInstruction },
     { 
       role: "user", 
       content: `ORIGINAL USER INPUT:\n${originalInput}\n\nAI OUTPUT WITH ISSUES:\n${output}\n\nISSUES TO FIX:\n- ${issueList}\n\nProvide the corrected output only:`
@@ -340,9 +363,10 @@ export async function enhanceOutput(output, presetId, originalInput, issues) {
  * @param {string} options.presetId - Preset used
  * @param {string} options.originalInput - User's original input
  * @param {boolean} options.autoCorrect - Whether to auto-correct issues
+ * @param {string} options.language - Language code for enhancement
  * @returns {Promise<object>} { finalOutput, wasEnhanced, validation }
  */
-export async function validateAndEnhance({ output, presetId, originalInput, autoCorrect = true }) {
+export async function validateAndEnhance({ output, presetId, originalInput, autoCorrect = true, language = "auto" }) {
   // First validation
   const validation = validateOutput(output, presetId, originalInput);
   
@@ -355,9 +379,9 @@ export async function validateAndEnhance({ output, presetId, originalInput, auto
     };
   }
 
-  // Attempt enhancement
+  // Attempt enhancement WITH LANGUAGE
   try {
-    const enhanced = await enhanceOutput(output, presetId, originalInput, validation.issues);
+    const enhanced = await enhanceOutput(output, presetId, originalInput, validation.issues, language);
     
     // Validate enhanced version
     const enhancedValidation = validateOutput(enhanced, presetId, originalInput);

@@ -66,12 +66,13 @@ export async function batchRewrite(req, res, next) {
     // 4) Quick slop clean (no API call)
     const cleaned = cleanSlop(rawOutput);
 
-    // 5) Quality validation + auto-correction if needed
+    // 5) Quality validation + auto-correction if needed (WITH LANGUAGE)
     const { finalOutput, wasEnhanced, validation } = await validateAndEnhance({
       output: cleaned,
       presetId,
       originalInput: text,
       autoCorrect: true,
+      language, // 🔥 PASS LANGUAGE TO ENHANCEMENT
     });
 
     // 6) Cache the final result
@@ -152,13 +153,14 @@ export async function streamRewrite(req, res, next) {
       }
     }
 
-    // Clean and validate final output
+    // Clean and validate final output (WITH LANGUAGE)
     const cleaned = cleanSlop(fullText);
     const { finalOutput, wasEnhanced, validation } = await validateAndEnhance({
       output: cleaned,
       presetId,
       originalInput: text,
       autoCorrect: true,
+      language, // 🔥 PASS LANGUAGE TO ENHANCEMENT
     });
 
     // Cache result
@@ -226,13 +228,14 @@ export async function batchRewriteWithContext(req, res, next) {
       maxTokens: params.max_tokens,
     });
 
-    // Clean + validate
+    // Clean + validate (WITH LANGUAGE)
     const cleaned = cleanSlop(rawOutput);
     const { finalOutput, wasEnhanced, validation } = await validateAndEnhance({
       output: cleaned,
       presetId,
       originalInput: text,
       autoCorrect: true,
+      language, // 🔥 PASS LANGUAGE TO ENHANCEMENT
     });
 
     const duration = Date.now() - start;
