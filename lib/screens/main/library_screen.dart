@@ -256,6 +256,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
         ),
       ),
+      floatingActionButton: _showProjects
+          ? FloatingActionButton(
+              onPressed: () => _showCreateProjectDialog(context),
+              backgroundColor: const Color(0xFF3B82F6),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 
@@ -362,17 +369,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           ],
         ),
-      );
-          },
-        ),
       ),
-      floatingActionButton: _showProjects
-          ? FloatingActionButton(
-              onPressed: () => _showCreateProjectDialog(context),
-              backgroundColor: const Color(0xFF3B82F6),
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
     );
   }
-}
+
+  Widget _buildProjectCard(
