@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'ai_actions_menu.dart';
+// import 'ai_actions_menu.dart'; // TODO: Re-enable when file is available
 
 // ============================================================
 //        RICH TEXT EDITOR WIDGET
@@ -410,18 +410,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                 ),
               ),
             
-            // AI Actions Menu - THE VIRAL KILLER
-            if (_showAIMenu && _currentSelection != null)
-              Positioned(
-                top: 100, // Position above the text
-                left: 50,
-                child: AIActionsMenu(
-                  selectedText: _selectedText,
-                  selection: _currentSelection!,
-                  onTextReplaced: _replaceSelectedText,
-                  onDismiss: _dismissAIMenu,
-                ),
-              ),
+            // TODO: AI Actions Menu disabled - re-enable when ai_actions_menu.dart is available
           ],
         ),
       ),
