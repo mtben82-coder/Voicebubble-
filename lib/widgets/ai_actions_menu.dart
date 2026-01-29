@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/ai_text_transformation_service.dart';
+import '../services/text_transformation_service.dart';
 import '../providers/app_state_provider.dart';
 
 class AIActionsMenu extends StatefulWidget {
@@ -31,7 +31,7 @@ class _AIActionsMenuState extends State<AIActionsMenu>
   bool _isProcessing = false;
   String? _processingAction;
   
-  final _transformationService = AITextTransformationService();
+  final _transformationService = TextTransformationService();
 
   final List<AIAction> _actions = [
     AIAction(id: 'rewrite', name: 'Rewrite', icon: '✨', description: 'Make it clearer & more impactful', color: Color(0xFF3B82F6)),

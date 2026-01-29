@@ -91,8 +91,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
             // Header
             Padding(
               padding: const EdgeInsets.all(24.0),
@@ -220,8 +221,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             const SizedBox(height: 24),
 
             // Items Timeline
-            Expanded(
-              child: _items.isEmpty
+            _items.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -242,20 +242,22 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemCount: _items.length,
-                      itemBuilder: (context, index) {
-                        return _buildItemCard(
-                          _items[index],
+                : Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      ..._items.map((item) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        child: _buildItemCard(
+                          item,
                           surfaceColor,
                           textColor,
                           secondaryTextColor,
                           gradientColors,
-                        );
-                      },
-                    ),
-            ),
+                        ),
+                      )).toList(),
+                      const SizedBox(height: 100), // Extra space at bottom
+                    ],
+                  ),
           ],
         ),
       ),
