@@ -1,184 +1,101 @@
+// ============================================================
+//        ELITE TEMPLATE FILL SCREEN
+// ============================================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import '../../constants/app_templates.dart';
-import '../../constants/presets.dart';
-import '../../providers/app_state_provider.dart';
-import '../main/result_screen.dart';
+import '../templates/template_models.dart';
+import '../services/speech_service.dart';
+// import '../services/ai_service.dart'; // Your AI service for generating output
 
 class TemplateFillScreen extends StatefulWidget {
-  final DocumentTemplate template;
+  final AppTemplate template;
 
-  const TemplateFillScreen({
-    super.key,
-    required this.template,
-  });
+  const TemplateFillScreen({super.key, required this.template});
 
   @override
   State<TemplateFillScreen> createState() => _TemplateFillScreenState();
 }
 
-class _TemplateFillScreenState extends State<TemplateFillScreen>
-    with TickerProviderStateMixin {
-  final Map<String, TextEditingController> _controllers = {};
-  final Map<String, bool> _isExpanded = {};
-  final Map<String, bool> _isRecording = {};
+class _TemplateFillScreenState extends State<TemplateFillScreen> with TickerProviderStateMixin {
+  late FilledTemplate _filledTemplate;
   int _currentSectionIndex = 0;
+  bool _isRecording = false;
   bool _isGenerating = false;
-  late AnimationController _progressController;
+  String? _generatedOutput;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    for (final section in widget.template.sections) {
-      _controllers[section.id] = TextEditingController();
-      _isExpanded[section.id] = false;
-      _isRecording[section.id] = false;
-    }
-    // First section expanded by default
-    if (widget.template.sections.isNotEmpty) {
-      _isExpanded[widget.template.sections.first.id] = true;
-    }
+    _filledTemplate = FilledTemplate(templateId: widget.template.id);
     
-    _progressController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
+    )..repeat(reverse: true);
+    
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
 
   @override
   void dispose() {
-    for (final controller in _controllers.values) {
-      controller.dispose();
-    }
-    _progressController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
-  double get _completionProgress {
-    if (widget.template.sections.isEmpty) return 0;
-    int filled = 0;
-    for (final section in widget.template.sections) {
-      if (_controllers[section.id]?.text.trim().isNotEmpty == true) {
-        filled++;
-      }
-    }
+  TemplateSection get _currentSection => widget.template.sections[_currentSectionIndex];
+  
+  double get _progress {
+    final filled = _filledTemplate.sectionInputs.values.where((v) => v.isNotEmpty).length;
     return filled / widget.template.sections.length;
   }
 
   bool get _canGenerate {
-    for (final section in widget.template.sections) {
-      if (section.isRequired && 
-          _controllers[section.id]?.text.trim().isEmpty == true) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  Future<void> _generateDocument() async {
-    if (!_canGenerate || _isGenerating) return;
-
-    setState(() => _isGenerating = true);
-    HapticFeedback.mediumImpact();
-
-    try {
-      // Build the prompt from all sections
-      final buffer = StringBuffer();
-      buffer.writeln('Create a ${widget.template.name} using this information:\n');
-      
-      for (final section in widget.template.sections) {
-        final value = _controllers[section.id]?.text.trim() ?? '';
-        if (value.isNotEmpty) {
-          buffer.writeln('${section.title}: $value');
-          buffer.writeln('(AI guidance: ${section.aiPrompt})\n');
-        }
-      }
-      
-      buffer.writeln('\nGenerate a polished, professional ${widget.template.name} that incorporates all the above. Write in a natural, human voice.');
-
-      // Navigate to result screen with the combined prompt
-      if (mounted) {
-        // Set the transcription and preset in app state
-        final appState = context.read<AppStateProvider>();
-        appState.setTranscription(buffer.toString());
-
-        // Find the magic preset
-        final magicPreset = AppPresets.quickPresets.firstWhere(
-          (p) => p.id == 'magic',
-        );
-        appState.setSelectedPreset(magicPreset);
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ResultScreen(),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGenerating = false);
-      }
-    }
-  }
-
-  void _expandSection(int index) {
-    HapticFeedback.selectionClick();
-    setState(() {
-      // Collapse all
-      for (final section in widget.template.sections) {
-        _isExpanded[section.id] = false;
-      }
-      // Expand selected
-      _isExpanded[widget.template.sections[index].id] = true;
-      _currentSectionIndex = index;
-    });
-  }
-
-  void _nextSection() {
-    if (_currentSectionIndex < widget.template.sections.length - 1) {
-      _expandSection(_currentSectionIndex + 1);
-    }
+    return widget.template.sections
+        .where((s) => s.required)
+        .every((s) => _filledTemplate.sectionInputs[s.id]?.isNotEmpty ?? false);
   }
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFF000000);
+    const backgroundColor = Color(0xFF0A0A0A);
     const surfaceColor = Color(0xFF1A1A1A);
     const textColor = Colors.white;
-    const secondaryTextColor = Color(0xFF94A3B8);
-    final templateColor = widget.template.color;
+    final primaryColor = widget.template.gradientColors[0];
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
+        child: _generatedOutput != null
+            ? _buildOutputView(primaryColor)
+            : _buildFillView(primaryColor, surfaceColor, textColor),
+      ),
+    );
+  }
+
+  Widget _buildFillView(Color primaryColor, Color surfaceColor, Color textColor) {
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: surfaceColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.close, color: textColor, size: 20),
+                      child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -189,509 +106,611 @@ class _TemplateFillScreenState extends State<TemplateFillScreen>
                         Text(
                           widget.template.name,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: textColor,
+                            color: Colors.white,
                           ),
                         ),
                         Text(
-                          widget.template.description,
+                          'Section ${_currentSectionIndex + 1} of ${widget.template.sections.length}',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: secondaryTextColor,
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.5),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  // Template icon
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: templateColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      widget.template.icon,
-                      color: templateColor,
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Progress Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${(_completionProgress * 100).toInt()}% complete',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: secondaryTextColor,
+                  if (_canGenerate)
+                    GestureDetector(
+                      onTap: _generateOutput,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: widget.template.gradientColors),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              'Generate',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Progress Bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  backgroundColor: surfaceColor,
+                  valueColor: AlwaysStoppedAnimation(primaryColor),
+                  minHeight: 6,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Section Navigation Pills
+        SizedBox(
+          height: 50,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: widget.template.sections.length,
+            itemBuilder: (context, index) {
+              final section = widget.template.sections[index];
+              final isCurrent = index == _currentSectionIndex;
+              final isFilled = _filledTemplate.sectionInputs[section.id]?.isNotEmpty ?? false;
+              
+              return GestureDetector(
+                onTap: () => setState(() => _currentSectionIndex = index),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isCurrent 
+                        ? primaryColor.withOpacity(0.2) 
+                        : (isFilled ? surfaceColor : Colors.transparent),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isCurrent ? primaryColor : (isFilled ? Colors.green : Colors.white24),
+                      width: isCurrent ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (isFilled && !isCurrent)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(Icons.check_circle, color: Colors.green, size: 16),
+                        ),
                       Text(
-                        '${widget.template.sections.length} sections',
+                        '${index + 1}',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: secondaryTextColor,
+                          color: isCurrent ? primaryColor : Colors.white70,
+                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: _completionProgress,
-                      backgroundColor: surfaceColor,
-                      valueColor: AlwaysStoppedAnimation(templateColor),
-                      minHeight: 6,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Sections List
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: widget.template.sections.length,
-                itemBuilder: (context, index) {
-                  final section = widget.template.sections[index];
-                  final isExpanded = _isExpanded[section.id] ?? false;
-                  final hasContent = _controllers[section.id]?.text.trim().isNotEmpty == true;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _SectionCard(
-                      section: section,
-                      controller: _controllers[section.id]!,
-                      isExpanded: isExpanded,
-                      hasContent: hasContent,
-                      templateColor: templateColor,
-                      onTap: () => _expandSection(index),
-                      onNext: _nextSection,
-                      isLast: index == widget.template.sections.length - 1,
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Generate Button
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _canGenerate && !_isGenerating ? _generateDocument : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _canGenerate ? templateColor : surfaceColor,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: surfaceColor,
-                    disabledForegroundColor: secondaryTextColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: _canGenerate ? 4 : 0,
-                    shadowColor: templateColor.withOpacity(0.4),
-                  ),
-                  child: _isGenerating
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _canGenerate ? Icons.auto_awesome : Icons.lock_outline,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _canGenerate ? 'Generate ${widget.template.name}' : 'Fill required sections',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatefulWidget {
-  final TemplateSection section;
-  final TextEditingController controller;
-  final bool isExpanded;
-  final bool hasContent;
-  final Color templateColor;
-  final VoidCallback onTap;
-  final VoidCallback onNext;
-  final bool isLast;
-
-  const _SectionCard({
-    required this.section,
-    required this.controller,
-    required this.isExpanded,
-    required this.hasContent,
-    required this.templateColor,
-    required this.onTap,
-    required this.onNext,
-    required this.isLast,
-  });
-
-  @override
-  State<_SectionCard> createState() => _SectionCardState();
-}
-
-class _SectionCardState extends State<_SectionCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<double> _expandAnimation;
-  bool _isRecording = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _expandAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeInOut,
-    );
-    if (widget.isExpanded) {
-      _animController.value = 1.0;
-    }
-  }
-
-  @override
-  void didUpdateWidget(_SectionCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isExpanded != oldWidget.isExpanded) {
-      if (widget.isExpanded) {
-        _animController.forward();
-      } else {
-        _animController.reverse();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const surfaceColor = Color(0xFF1A1A1A);
-    const textColor = Colors.white;
-    const secondaryTextColor = Color(0xFF94A3B8);
-
-    return GestureDetector(
-      onTap: widget.isExpanded ? null : widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: widget.isExpanded
-                ? widget.templateColor.withOpacity(0.5)
-                : widget.hasContent
-                    ? const Color(0xFF10B981).withOpacity(0.5)
-                    : Colors.white.withOpacity(0.1),
-            width: widget.isExpanded ? 2 : 1,
+              );
+            },
           ),
         ),
-        child: Column(
-          children: [
-            // Header (always visible)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Status Icon
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: widget.hasContent
-                          ? const Color(0xFF10B981).withOpacity(0.2)
-                          : widget.isExpanded
-                              ? widget.templateColor.withOpacity(0.2)
-                              : Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      widget.hasContent
-                          ? Icons.check
-                          : widget.section.icon,
-                      color: widget.hasContent
-                          ? const Color(0xFF10B981)
-                          : widget.isExpanded
-                              ? widget.templateColor
-                              : secondaryTextColor,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                widget.section.title,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            if (!widget.section.isRequired)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Optional',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: secondaryTextColor,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (!widget.isExpanded && widget.hasContent)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              widget.controller.text,
-                              style: TextStyle(
-                                color: secondaryTextColor,
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    widget.isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: secondaryTextColor,
-                  ),
-                ],
-              ),
-            ),
 
-            // Expanded Content
-            SizeTransition(
-              sizeFactor: _expandAnimation,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        // Main Content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section Header
+                Row(
                   children: [
-                    // Hint
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: widget.templateColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        color: primaryColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
+                      child: Icon(_currentSection.icon, color: primaryColor, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            color: widget.templateColor,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              widget.section.hint,
-                              style: TextStyle(
-                                color: widget.templateColor,
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
+                          Row(
+                            children: [
+                              Text(
+                                _currentSection.title,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
+                              if (!_currentSection.required)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'Optional',
+                                    style: TextStyle(fontSize: 10, color: Colors.white54),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _currentSection.hint,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.6),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                  ],
+                ),
 
-                    // Text Input
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0A0A0A),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      child: TextField(
-                        controller: widget.controller,
-                        maxLines: widget.section.maxLines,
-                        style: const TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Type or tap mic to speak...',
-                          hintStyle: TextStyle(
-                            color: secondaryTextColor.withOpacity(0.5),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(14),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
+                const SizedBox(height: 24),
+
+                // Example/Placeholder
+                if (_currentSection.placeholder != null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Action Buttons
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Voice Input Button
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              // TODO: Implement voice input
-                              HapticFeedback.mediumImpact();
-                              setState(() => _isRecording = !_isRecording);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _isRecording
-                                    ? const Color(0xFFEF4444).withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: _isRecording
-                                      ? const Color(0xFFEF4444)
-                                      : Colors.transparent,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    _isRecording ? Icons.stop : Icons.mic,
-                                    color: _isRecording
-                                        ? const Color(0xFFEF4444)
-                                        : textColor,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _isRecording ? 'Recording...' : 'Voice Input',
-                                    style: TextStyle(
-                                      color: _isRecording
-                                          ? const Color(0xFFEF4444)
-                                          : textColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                        Row(
+                          children: [
+                            Icon(Icons.lightbulb_outline, size: 16, color: Colors.amber.withOpacity(0.8)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Example',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.amber.withOpacity(0.8),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        // Next Button
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              widget.onNext();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: widget.templateColor,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    widget.isLast ? 'Done' : 'Next',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Icon(
-                                    widget.isLast
-                                        ? Icons.check
-                                        : Icons.arrow_forward,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
-                            ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _currentSection.placeholder!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.5),
+                            fontStyle: FontStyle.italic,
+                            height: 1.5,
                           ),
                         ),
                       ],
                     ),
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Input Display
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(minHeight: 150),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isRecording ? primaryColor : Colors.white.withOpacity(0.1),
+                      width: _isRecording ? 2 : 1,
+                    ),
+                  ),
+                  child: _filledTemplate.sectionInputs[_currentSection.id]?.isNotEmpty ?? false
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _filledTemplate.sectionInputs[_currentSection.id]!,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                height: 1.6,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _filledTemplate.sectionInputs[_currentSection.id] = '';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.refresh, color: Colors.red, size: 16),
+                                        SizedBox(width: 6),
+                                        Text('Re-record', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                      : Center(
+                          child: Text(
+                            _isRecording ? 'Listening...' : 'Tap the mic to speak',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ),
+
+        // Bottom Controls
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            border: Border(
+              top: BorderSide(color: Colors.white.withOpacity(0.1)),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Previous Button
+              if (_currentSectionIndex > 0)
+                GestureDetector(
+                  onTap: () => setState(() => _currentSectionIndex--),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.arrow_back, color: Colors.white70),
+                  ),
+                ),
+              
+              const Spacer(),
+              
+              // Record Button
+              GestureDetector(
+                onTap: _toggleRecording,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _isRecording ? _pulseAnimation.value : 1.0,
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: _isRecording 
+                                ? [Colors.red, Colors.redAccent]
+                                : widget.template.gradientColors,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_isRecording ? Colors.red : primaryColor).withOpacity(0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _isRecording ? Icons.stop : Icons.mic,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              const Spacer(),
+              
+              // Next/Skip Button
+              if (_currentSectionIndex < widget.template.sections.length - 1)
+                GestureDetector(
+                  onTap: () => setState(() => _currentSectionIndex++),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          _currentSection.required ? 'Next' : 'Skip',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.arrow_forward, color: Colors.white70, size: 20),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_canGenerate)
+                GestureDetector(
+                  onTap: _generateOutput,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: widget.template.gradientColors),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                        SizedBox(width: 6),
+                        Text(
+                          'Generate',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOutputView(Color primaryColor) {
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => _generatedOutput = null),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Generated Output',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      widget.template.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+
+        // Output Content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: primaryColor.withOpacity(0.3)),
+              ),
+              child: SelectableText(
+                _generatedOutput!,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  height: 1.8,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Bottom Actions
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            border: Border(
+              top: BorderSide(color: Colors.white.withOpacity(0.1)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: _generatedOutput!));
+                    HapticFeedback.mediumImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Copied to clipboard!'),
+                        backgroundColor: Color(0xFF10B981),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: widget.template.gradientColors),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.copy, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Copy',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  // Share functionality
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.share, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _toggleRecording() async {
+    HapticFeedback.mediumImpact();
+    
+    if (_isRecording) {
+      // Stop recording
+      setState(() => _isRecording = false);
+      // TODO: Get transcription from speech service
+      // For now, simulate with placeholder
+      await Future.delayed(const Duration(milliseconds: 500));
+      setState(() {
+        _filledTemplate.sectionInputs[_currentSection.id] = 
+            _currentSection.placeholder ?? 'Your voice input will appear here...';
+      });
+    } else {
+      // Start recording
+      setState(() => _isRecording = true);
+      // TODO: Start speech recognition
+    }
+  }
+
+  void _generateOutput() async {
+    if (!_canGenerate) return;
+    
+    HapticFeedback.mediumImpact();
+    setState(() => _isGenerating = true);
+    
+    // TODO: Call your AI service to generate output
+    // For now, simulate with a combined output
+    await Future.delayed(const Duration(seconds: 2));
+    
+    final buffer = StringBuffer();
+    buffer.writeln('# ${widget.template.name}\n');
+    
+    for (final section in widget.template.sections) {
+      final input = _filledTemplate.sectionInputs[section.id];
+      if (input?.isNotEmpty ?? false) {
+        buffer.writeln('## ${section.title}\n');
+        buffer.writeln('$input\n');
+      }
+    }
+    
+    setState(() {
+      _isGenerating = false;
+      _generatedOutput = buffer.toString();
+    });
+  }
+}
+
+// Helper widget for min height container
+class _MinHeightContainer extends StatelessWidget {
+  final double min;
+  final Widget child;
+  final EdgeInsets? padding;
+  final BoxDecoration? decoration;
+
+  const _MinHeightContainer({
+    required this.min,
+    required this.child,
+    this.padding,
+    this.decoration,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(minHeight: min),
+      padding: padding,
+      decoration: decoration,
+      child: child,
     );
   }
 }

@@ -20,7 +20,7 @@ class StorageService {
     
     // Register Hive type adapters
     if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(ArchivedItemAdapter());
+      Hive.registerAdapter(ArchivedItem.adapter);
       debugPrint('✅ ArchivedItemAdapter registered (typeId: 0)');
     }
     if (!Hive.isAdapterRegistered(1)) {
