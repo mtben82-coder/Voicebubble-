@@ -66,6 +66,10 @@ dependencies:
   flutter_quill: ^9.0.0
   flutter_quill_extensions: ^9.0.0
 
+dependency_overrides:
+  # Fix flutter_inappwebview namespace issue
+  flutter_inappwebview: ^6.1.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
