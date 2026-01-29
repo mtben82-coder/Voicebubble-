@@ -51,6 +51,11 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
   int _characterCount = 0;
+  
+  // AI Actions Menu state
+  bool _showingAIMenu = false;
+  TextSelection? _currentSelection;
+  Offset? _selectionPosition;
 
   @override
   void initState() {
@@ -82,12 +87,16 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
+    
+    // Listen for selection changes
+    _controller.addListener(_onSelectionChanged);
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
     _controller.removeListener(_onTextChanged);
+    _controller.removeListener(_onSelectionChanged);
     _controller.dispose();
     _focusNode.dispose();
     _saveIndicatorController.dispose();
@@ -151,6 +160,68 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
         );
       }
     }
+  }
+
+  void _onSelectionChanged() {
+    if (widget.readOnly) return;
+    
+    final selection = _controller.selection;
+    
+    // Hide AI menu if no selection or collapsed selection
+    if (!selection.isValid || selection.isCollapsed) {
+      if (_showingAIMenu) {
+        setState(() {
+          _showingAIMenu = false;
+          _currentSelection = null;
+          _selectionPosition = null;
+        });
+      }
+      return;
+    }
+
+    // Show AI menu for text selection
+    final selectedText = _controller.document.toPlainText().substring(
+      selection.start,
+      selection.end,
+    ).trim();
+
+    if (selectedText.isNotEmpty && selectedText.length > 2) {
+      // Calculate position for AI menu (simplified - would need proper text position calculation)
+      final position = Offset(200, 100); // Placeholder position
+      
+      setState(() {
+        _showingAIMenu = true;
+        _currentSelection = selection;
+        _selectionPosition = position;
+      });
+    }
+  }
+
+  void _replaceSelectedText(String newText) {
+    if (_currentSelection == null) return;
+    
+    // Replace the selected text
+    _controller.replaceText(
+      _currentSelection!.start,
+      _currentSelection!.end - _currentSelection!.start,
+      newText,
+      TextSelection.collapsed(offset: _currentSelection!.start + newText.length),
+    );
+    
+    // Hide AI menu
+    setState(() {
+      _showingAIMenu = false;
+      _currentSelection = null;
+      _selectionPosition = null;
+    });
+  }
+
+  void _dismissAIMenu() {
+    setState(() {
+      _showingAIMenu = false;
+      _currentSelection = null;
+      _selectionPosition = null;
+    });
   }
 
   @override
@@ -352,6 +423,20 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     );
                   },
                 ),
+              ),
+
+            // AI Actions Menu (THE VIRAL FEATURE!)
+            if (_showingAIMenu && _currentSelection != null && _selectionPosition != null)
+              AIActionsMenu(
+                selectedText: _controller.document.toPlainText().substring(
+                  _currentSelection!.start,
+                  _currentSelection!.end,
+                ),
+                selection: _currentSelection!,
+                position: _selectionPosition!,
+                onTextReplaced: _replaceSelectedText,
+                onDismiss: _dismissAIMenu,
+                documentContext: _controller.document.toPlainText(),
               ),
           ],
         ),

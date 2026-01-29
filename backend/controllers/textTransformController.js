@@ -1,224 +1,306 @@
-import OpenAI from 'openai';
+// ============================================================
+//        TEXT TRANSFORMATION CONTROLLER
+// ============================================================
+//
+// Elite AI-powered text transformation engine.
+// The backend that powers the viral Select Text → AI Actions feature.
+//
+// ============================================================
+
+const { OpenAI } = require('openai');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// AI Transformation Prompts
+// Elite AI prompts for each transformation type
 const TRANSFORMATION_PROMPTS = {
-  rewrite: `You are a professional editor. Rewrite the given text to improve clarity, flow, and readability while maintaining the original meaning and tone. Make it more engaging and polished.
+  rewrite: `You are an elite writing assistant. Rewrite the given text to be clearer, more engaging, and better structured while preserving the original meaning and tone. Make it flow naturally and be more compelling to read.
 
 Rules:
-- Keep the same length approximately
-- Maintain the original tone and style
-- Fix any grammar or clarity issues
-- Make it more engaging
+- Preserve the original meaning and intent
+- Improve clarity and readability
+- Make it more engaging and compelling
+- Maintain the appropriate tone
 - Return ONLY the rewritten text, no explanations`,
 
-  expand: `You are a content expansion specialist. Take the given text and expand it with more detail, examples, and context while maintaining the original message and tone.
+  expand: `You are an expert content developer. Expand the given text by adding relevant details, examples, explanations, and context. Make it more comprehensive and informative while maintaining the original style and purpose.
 
 Rules:
-- Add 50-100% more content
-- Include relevant details and examples
-- Maintain the original tone
-- Keep it coherent and well-structured
+- Add valuable details and context
+- Include relevant examples where appropriate
+- Maintain the original style and tone
+- Make it more comprehensive but not verbose
 - Return ONLY the expanded text, no explanations`,
 
-  shorten: `You are a content editor specializing in concise writing. Shorten the given text while preserving all key information and maintaining clarity.
+  shorten: `You are a master editor. Condense the given text to its essential points while preserving all key information and maintaining clarity. Remove redundancy and make every word count.
 
 Rules:
-- Reduce length by 30-50%
-- Keep all essential information
+- Preserve all key information
+- Remove redundancy and filler words
 - Maintain clarity and readability
-- Preserve the original tone
+- Keep the essential message intact
 - Return ONLY the shortened text, no explanations`,
 
-  professional: `You are a business communication expert. Rewrite the given text in a professional, formal tone suitable for business contexts.
+  makeProfessional: `You are a business communication expert. Transform the given text into professional, formal language suitable for business contexts. Use sophisticated vocabulary, proper structure, and maintain authority while being clear and respectful.
 
 Rules:
 - Use formal, professional language
-- Remove casual expressions
-- Maintain clarity and directness
-- Keep it respectful and authoritative
+- Maintain clarity and respect
+- Use sophisticated but accessible vocabulary
+- Structure for business contexts
 - Return ONLY the professional version, no explanations`,
 
-  casual: `You are a friendly communication specialist. Rewrite the given text in a casual, conversational tone that feels natural and approachable.
+  makeCasual: `You are a conversational writing expert. Transform the given text into casual, friendly language that feels natural and approachable. Use conversational tone, contractions, and relatable expressions while keeping the core message intact.
 
 Rules:
 - Use casual, friendly language
-- Make it conversational and warm
-- Keep it natural and relatable
-- Maintain the core message
+- Include contractions and conversational phrases
+- Make it feel natural and approachable
+- Preserve the core message
 - Return ONLY the casual version, no explanations`,
+
+  fixGrammar: `You are an elite grammar and style expert. Correct all grammatical errors, improve sentence structure, fix punctuation, and enhance readability while preserving the original voice and meaning.
+
+Rules:
+- Fix all grammatical errors
+- Improve sentence structure and flow
+- Correct punctuation and spelling
+- Preserve the original voice and meaning
+- Return ONLY the corrected text, no explanations`,
+
+  makeCreative: `You are a creative writing genius. Transform the given text to be more imaginative, engaging, and memorable. Use vivid language, interesting metaphors, and creative expressions while maintaining the core message.
+
+Rules:
+- Use vivid, imaginative language
+- Add creative metaphors and expressions
+- Make it more engaging and memorable
+- Preserve the core message and meaning
+- Return ONLY the creative version, no explanations`,
+
+  makePersuasive: `You are a master of persuasion. Transform the given text to be more compelling and convincing. Use persuasive techniques, stronger language, and emotional appeals while maintaining credibility and authenticity.
+
+Rules:
+- Use persuasive language and techniques
+- Make it more compelling and convincing
+- Include emotional appeals where appropriate
+- Maintain credibility and authenticity
+- Return ONLY the persuasive version, no explanations`,
+
+  summarize: `You are an expert summarizer. Create a concise, well-structured summary that captures all the key points and essential information from the given text. Make it clear and easy to understand.
+
+Rules:
+- Capture all key points and essential information
+- Make it concise but comprehensive
+- Structure it clearly and logically
+- Ensure it's easy to understand
+- Return ONLY the summary, no explanations`,
+
+  translate: `You are a professional translator. Translate the given text to the target language while preserving the meaning, tone, and style as much as possible.
+
+Rules:
+- Preserve meaning, tone, and style
+- Use natural language in the target language
+- Maintain cultural appropriateness
+- Ensure accuracy and fluency
+- Return ONLY the translated text, no explanations`
 };
 
 // Transform text using AI
-async function transformText(req, res) {
+const transformText = async (req, res) => {
   try {
-    const { text, action, context } = req.body;
+    const { text, action, context, targetLanguage } = req.body;
 
     // Validate input
     if (!text || !action) {
       return res.status(400).json({
-        success: false,
-        error: 'Text and action are required'
+        error: 'Text and action are required',
+        code: 'MISSING_PARAMETERS'
       });
     }
 
-    if (!TRANSFORMATION_PROMPTS[action]) {
+    if (text.trim().length === 0) {
       return res.status(400).json({
-        success: false,
-        error: 'Invalid action. Supported actions: rewrite, expand, shorten, professional, casual'
+        error: 'Text cannot be empty',
+        code: 'EMPTY_TEXT'
       });
     }
 
-    // Build the prompt
-    const systemPrompt = TRANSFORMATION_PROMPTS[action];
-    let userPrompt = `Text to transform: "${text}"`;
-    
-    if (context && context.trim()) {
-      userPrompt += `\n\nContext (surrounding text): "${context}"`;
+    if (text.length > 10000) {
+      return res.status(400).json({
+        error: 'Text is too long (max 10,000 characters)',
+        code: 'TEXT_TOO_LONG'
+      });
     }
 
-    console.log(`🤖 AI Transform Request: ${action} | Text: "${text.substring(0, 50)}..."`);
+    // Get the appropriate prompt
+    const systemPrompt = TRANSFORMATION_PROMPTS[action];
+    if (!systemPrompt) {
+      return res.status(400).json({
+        error: 'Invalid action type',
+        code: 'INVALID_ACTION'
+      });
+    }
 
-    // Call OpenAI
+    // Build the user message
+    let userMessage = `Text to transform: "${text}"`;
+    
+    // Add context if provided
+    if (context && context.trim().length > 0) {
+      userMessage += `\n\nDocument context: "${context.trim()}"`;
+    }
+
+    // Add target language for translation
+    if (action === 'translate' && targetLanguage) {
+      userMessage += `\n\nTarget language: ${targetLanguage}`;
+    }
+
+    console.log(`🤖 Transforming text with action: ${action}`);
+    console.log(`📝 Text length: ${text.length} characters`);
+
+    // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: 'gpt-4o-mini',
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: userMessage
+        }
       ],
-      temperature: 0.3,
-      max_tokens: 1000,
+      temperature: action === 'fixGrammar' ? 0.1 : 0.3,
+      max_tokens: Math.min(4000, text.length * 3),
+      presence_penalty: 0.1,
+      frequency_penalty: 0.1,
     });
 
     const transformedText = completion.choices[0].message.content.trim();
 
-    console.log(`✅ AI Transform Success: ${action} | Result: "${transformedText.substring(0, 50)}..."`);
+    if (!transformedText || transformedText.length === 0) {
+      throw new Error('AI returned empty response');
+    }
 
+    console.log(`✅ Transformation successful: ${transformedText.length} characters`);
+
+    // Return the transformed text
     res.json({
-      success: true,
+      transformedText,
       originalText: text,
-      transformedText: transformedText,
-      action: action,
-      usage: completion.usage
+      action,
+      processingTime: Date.now() - req.startTime,
+      success: true
     });
 
   } catch (error) {
     console.error('❌ Text transformation error:', error);
+
+    // Handle specific OpenAI errors
+    if (error.code === 'insufficient_quota') {
+      return res.status(429).json({
+        error: 'AI service temporarily unavailable',
+        code: 'QUOTA_EXCEEDED'
+      });
+    }
+
+    if (error.code === 'rate_limit_exceeded') {
+      return res.status(429).json({
+        error: 'Too many requests, please try again later',
+        code: 'RATE_LIMITED'
+      });
+    }
+
+    // Generic error response
     res.status(500).json({
-      success: false,
-      error: 'Failed to transform text',
-      details: error.message
+      error: 'Text transformation failed',
+      code: 'TRANSFORMATION_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-}
+};
 
-// Batch transform multiple texts
-async function batchTransformText(req, res) {
+// Translate text to target language
+const translateText = async (req, res) => {
   try {
-    const { texts, action, context } = req.body;
+    const { text, targetLanguage } = req.body;
 
-    if (!texts || !Array.isArray(texts) || texts.length === 0) {
+    if (!text || !targetLanguage) {
       return res.status(400).json({
-        success: false,
-        error: 'Texts array is required'
+        error: 'Text and target language are required',
+        code: 'MISSING_PARAMETERS'
       });
     }
 
-    if (texts.length > 10) {
-      return res.status(400).json({
-        success: false,
-        error: 'Maximum 10 texts per batch request'
-      });
-    }
+    console.log(`🌍 Translating to: ${targetLanguage}`);
 
-    console.log(`🤖 Batch AI Transform Request: ${action} | ${texts.length} texts`);
-
-    const results = [];
-    
-    for (const text of texts) {
-      try {
-        const systemPrompt = TRANSFORMATION_PROMPTS[action];
-        let userPrompt = `Text to transform: "${text}"`;
-        
-        if (context && context.trim()) {
-          userPrompt += `\n\nContext: "${context}"`;
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: TRANSFORMATION_PROMPTS.translate
+        },
+        {
+          role: 'user',
+          content: `Translate this text to ${targetLanguage}: "${text}"`
         }
+      ],
+      temperature: 0.1,
+      max_tokens: Math.min(4000, text.length * 2),
+    });
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          temperature: 0.3,
-          max_tokens: 1000,
-        });
+    const translatedText = completion.choices[0].message.content.trim();
 
-        results.push({
-          originalText: text,
-          transformedText: completion.choices[0].message.content.trim(),
-          success: true
-        });
-
-      } catch (error) {
-        results.push({
-          originalText: text,
-          transformedText: null,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-
-    console.log(`✅ Batch AI Transform Complete: ${results.filter(r => r.success).length}/${results.length} successful`);
+    console.log(`✅ Translation successful`);
 
     res.json({
-      success: true,
-      action: action,
-      results: results
+      translatedText,
+      originalText: text,
+      targetLanguage,
+      success: true
     });
 
   } catch (error) {
-    console.error('❌ Batch text transformation error:', error);
+    console.error('❌ Translation error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to batch transform texts',
-      details: error.message
+      error: 'Translation failed',
+      code: 'TRANSLATION_ERROR'
     });
   }
-}
+};
 
-// Get available transformation actions
-function getTransformationActions(req, res) {
-  const actions = Object.keys(TRANSFORMATION_PROMPTS).map(action => ({
-    id: action,
-    name: action.charAt(0).toUpperCase() + action.slice(1),
-    description: getActionDescription(action)
-  }));
+// Get available languages
+const getLanguages = async (req, res) => {
+  const languages = [
+    { code: 'es', name: 'Spanish' },
+    { code: 'fr', name: 'French' },
+    { code: 'de', name: 'German' },
+    { code: 'it', name: 'Italian' },
+    { code: 'pt', name: 'Portuguese' },
+    { code: 'ru', name: 'Russian' },
+    { code: 'ja', name: 'Japanese' },
+    { code: 'ko', name: 'Korean' },
+    { code: 'zh', name: 'Chinese (Simplified)' },
+    { code: 'ar', name: 'Arabic' },
+    { code: 'hi', name: 'Hindi' },
+    { code: 'nl', name: 'Dutch' },
+    { code: 'sv', name: 'Swedish' },
+    { code: 'no', name: 'Norwegian' },
+    { code: 'da', name: 'Danish' },
+    { code: 'pl', name: 'Polish' },
+    { code: 'tr', name: 'Turkish' },
+    { code: 'he', name: 'Hebrew' },
+    { code: 'th', name: 'Thai' },
+    { code: 'vi', name: 'Vietnamese' },
+  ];
 
-  res.json({
-    success: true,
-    actions: actions
-  });
-}
+  res.json(languages);
+};
 
-function getActionDescription(action) {
-  const descriptions = {
-    rewrite: 'Improve clarity, flow, and readability',
-    expand: 'Add more detail and context',
-    shorten: 'Make it concise while keeping key info',
-    professional: 'Convert to formal, business tone',
-    casual: 'Make it friendly and conversational'
-  };
-  
-  return descriptions[action] || 'Transform text';
-}
-
-export {
+module.exports = {
   transformText,
-  batchTransformText,
-  getTransformationActions
+  translateText,
+  getLanguages,
 };

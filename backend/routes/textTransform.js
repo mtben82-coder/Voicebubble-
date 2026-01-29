@@ -1,15 +1,21 @@
 import express from 'express';
-import * as textTransformController from '../controllers/textTransformController.js';
+import { transformText, translateText, getLanguages } from '../controllers/textTransformController.js';
 
 const router = express.Router();
 
-// Transform single text
-router.post('/transform', textTransformController.transformText);
+// Add request timing middleware
+router.use((req, res, next) => {
+  req.startTime = Date.now();
+  next();
+});
 
-// Batch transform multiple texts
-router.post('/batch-transform', textTransformController.batchTransformText);
+// Transform text with AI actions
+router.post('/transform-text', transformText);
 
-// Get available transformation actions
-router.get('/actions', textTransformController.getTransformationActions);
+// Translate text to target language  
+router.post('/translate-text', translateText);
+
+// Get available languages for translation
+router.get('/languages', getLanguages);
 
 export default router;
