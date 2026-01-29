@@ -307,34 +307,39 @@ class ProjectSection {
   final String title;
   final String? subtitle;
   final String? description;
+  final String? content;  // Content field for adapters
   final int order;
   final SectionStatus status;
   final List<String> recordingIds;  // Links to recordings
   final int wordCount;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final Map<String, dynamic>? metadata;  // Type-specific data
   final List<ProjectSection>? subsections;  // For nested structures
+  final List<ProjectSection> children;  // Children field for adapters
 
   const ProjectSection({
     required this.id,
     required this.title,
     this.subtitle,
     this.description,
+    this.content,
     required this.order,
     this.status = SectionStatus.notStarted,
     this.recordingIds = const [],
     this.wordCount = 0,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.metadata,
     this.subsections,
+    this.children = const [],
   });
 
   ProjectSection copyWith({
     String? title,
     String? subtitle,
     String? description,
+    String? content,
     int? order,
     SectionStatus? status,
     List<String>? recordingIds,
@@ -342,12 +347,14 @@ class ProjectSection {
     DateTime? updatedAt,
     Map<String, dynamic>? metadata,
     List<ProjectSection>? subsections,
+    List<ProjectSection>? children,
   }) {
     return ProjectSection(
       id: id,
       title: title ?? this.title,
       subtitle: subtitle ?? this.subtitle,
       description: description ?? this.description,
+      content: content ?? this.content,
       order: order ?? this.order,
       status: status ?? this.status,
       recordingIds: recordingIds ?? this.recordingIds,
@@ -356,6 +363,7 @@ class ProjectSection {
       updatedAt: updatedAt ?? DateTime.now(),
       metadata: metadata ?? this.metadata,
       subsections: subsections ?? this.subsections,
+      children: children ?? this.children,
     );
   }
 
@@ -575,15 +583,19 @@ class CharacterMemory {
   final Map<String, String> relationships;  // characterId -> relationship
   final String? backstory;
   final Map<String, dynamic>? customFields;
+  final String? voiceStyle;  // Voice style for adapters
+  final String? appearance;  // Appearance for adapters
 
   const CharacterMemory({
     required this.id,
     required this.name,
-    required this.description,
+    this.description = '',
     this.traits = const [],
     this.relationships = const {},
     this.backstory,
     this.customFields,
+    this.voiceStyle,
+    this.appearance,
   });
 
   Map<String, dynamic> toJson() => {
@@ -594,16 +606,20 @@ class CharacterMemory {
     'relationships': relationships,
     'backstory': backstory,
     'customFields': customFields,
+    'voiceStyle': voiceStyle,
+    'appearance': appearance,
   };
 
   factory CharacterMemory.fromJson(Map<String, dynamic> json) => CharacterMemory(
     id: json['id'],
     name: json['name'],
-    description: json['description'],
+    description: json['description'] ?? '',
     traits: List<String>.from(json['traits'] ?? []),
     relationships: Map<String, String>.from(json['relationships'] ?? {}),
     backstory: json['backstory'],
     customFields: json['customFields'],
+    voiceStyle: json['voiceStyle'],
+    appearance: json['appearance'],
   );
 }
 
@@ -613,13 +629,15 @@ class LocationMemory {
   final String description;
   final List<String> features;
   final String? mood;
+  final String? atmosphere;  // Atmosphere for adapters
 
   const LocationMemory({
     required this.id,
     required this.name,
-    required this.description,
+    this.description = '',
     this.features = const [],
     this.mood,
+    this.atmosphere,
   });
 
   Map<String, dynamic> toJson() => {
@@ -628,14 +646,16 @@ class LocationMemory {
     'description': description,
     'features': features,
     'mood': mood,
+    'atmosphere': atmosphere,
   };
 
   factory LocationMemory.fromJson(Map<String, dynamic> json) => LocationMemory(
     id: json['id'],
     name: json['name'],
-    description: json['description'],
+    description: json['description'] ?? '',
     features: List<String>.from(json['features'] ?? []),
     mood: json['mood'],
+    atmosphere: json['atmosphere'],
   );
 }
 
@@ -673,13 +693,15 @@ class PlotPoint {
   final String? sectionId;
   final int order;
   final bool isResolved;
+  final PlotPointType type;  // Type for adapters
 
   const PlotPoint({
     required this.id,
     required this.description,
     this.sectionId,
-    required this.order,
+    this.order = 0,
     this.isResolved = false,
+    this.type = PlotPointType.event,
   });
 
   Map<String, dynamic> toJson() => {
@@ -688,14 +710,18 @@ class PlotPoint {
     'sectionId': sectionId,
     'order': order,
     'isResolved': isResolved,
+    'type': type.name,
   };
 
   factory PlotPoint.fromJson(Map<String, dynamic> json) => PlotPoint(
     id: json['id'],
     description: json['description'],
     sectionId: json['sectionId'],
-    order: json['order'],
+    order: json['order'] ?? 0,
     isResolved: json['isResolved'] ?? false,
+    type: json['type'] != null
+        ? PlotPointType.values.firstWhere((t) => t.name == json['type'], orElse: () => PlotPointType.event)
+        : PlotPointType.event,
   );
 }
 
@@ -707,36 +733,43 @@ class EliteProject {
   final String id;
   final String name;
   final String? description;
+  final String? subtitle;  // Subtitle for adapters
   final EliteProjectType type;
   final int colorIndex;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastOpenedAt;
-  
+
   // Structure
   final List<ProjectSection> sections;
   final String? currentSectionId;  // What user is working on
-  
+  final ProjectStructure structure;  // Structure for adapters
+
   // Goals & Progress
   final List<ProjectGoal> goals;
   final int totalWordCount;
-  
+  final ProjectProgress progress;  // Progress for adapters
+  final ProjectGoals? projectGoals;  // Goals container for adapters
+
   // AI Memory
   final ProjectMemory? memory;
-  
+  final ProjectAIMemory aiMemory;  // AI Memory for adapters
+
   // Type-specific settings
   final Map<String, dynamic>? settings;
-  
+  final String? templateId;  // Template ID for adapters
+
   // Metadata
   final String? coverImagePath;
   final List<String> tags;
   final bool isArchived;
   final bool isPinned;
 
-  const EliteProject({
+  EliteProject({
     required this.id,
     required this.name,
     this.description,
+    this.subtitle,
     required this.type,
     this.colorIndex = 0,
     required this.createdAt,
@@ -744,15 +777,22 @@ class EliteProject {
     this.lastOpenedAt,
     this.sections = const [],
     this.currentSectionId,
+    ProjectStructure? structure,
     this.goals = const [],
     this.totalWordCount = 0,
+    ProjectProgress? progress,
+    this.projectGoals,
     this.memory,
+    ProjectAIMemory? aiMemory,
     this.settings,
+    this.templateId,
     this.coverImagePath,
     this.tags = const [],
     this.isArchived = false,
     this.isPinned = false,
-  });
+  }) : structure = structure ?? const ProjectStructure(),
+       progress = progress ?? const ProjectProgress(),
+       aiMemory = aiMemory ?? const ProjectAIMemory();
 
   ProjectTypeMetadata get metadata => ProjectTypeMetadata.get(type);
 
@@ -773,16 +813,22 @@ class EliteProject {
   EliteProject copyWith({
     String? name,
     String? description,
+    String? subtitle,
     EliteProjectType? type,
     int? colorIndex,
     DateTime? updatedAt,
     DateTime? lastOpenedAt,
     List<ProjectSection>? sections,
     String? currentSectionId,
+    ProjectStructure? structure,
     List<ProjectGoal>? goals,
     int? totalWordCount,
+    ProjectProgress? progress,
+    ProjectGoals? projectGoals,
     ProjectMemory? memory,
+    ProjectAIMemory? aiMemory,
     Map<String, dynamic>? settings,
+    String? templateId,
     String? coverImagePath,
     List<String>? tags,
     bool? isArchived,
@@ -792,6 +838,7 @@ class EliteProject {
       id: id,
       name: name ?? this.name,
       description: description ?? this.description,
+      subtitle: subtitle ?? this.subtitle,
       type: type ?? this.type,
       colorIndex: colorIndex ?? this.colorIndex,
       createdAt: createdAt,
@@ -799,10 +846,15 @@ class EliteProject {
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       sections: sections ?? this.sections,
       currentSectionId: currentSectionId ?? this.currentSectionId,
+      structure: structure ?? this.structure,
       goals: goals ?? this.goals,
       totalWordCount: totalWordCount ?? this.totalWordCount,
+      progress: progress ?? this.progress,
+      projectGoals: projectGoals ?? this.projectGoals,
       memory: memory ?? this.memory,
+      aiMemory: aiMemory ?? this.aiMemory,
       settings: settings ?? this.settings,
+      templateId: templateId ?? this.templateId,
       coverImagePath: coverImagePath ?? this.coverImagePath,
       tags: tags ?? this.tags,
       isArchived: isArchived ?? this.isArchived,
@@ -853,4 +905,217 @@ class EliteProject {
     isArchived: json['isArchived'] ?? false,
     isPinned: json['isPinned'] ?? false,
   );
+}
+
+// =============================================================================
+// ADAPTER-COMPATIBLE CLASSES
+// These classes are required by the Hive adapters in elite_project_adapters.dart
+// =============================================================================
+
+/// Wrapper class for project sections (used by adapters)
+class ProjectStructure {
+  final List<ProjectSection> sections;
+
+  const ProjectStructure({
+    this.sections = const [],
+  });
+
+  ProjectStructure copyWith({List<ProjectSection>? sections}) {
+    return ProjectStructure(sections: sections ?? this.sections);
+  }
+}
+
+/// Progress tracking for projects (used by adapters)
+class ProjectProgress {
+  final int totalWordCount;
+  final int totalSections;
+  final int sectionsComplete;
+  final int currentStreak;
+  final int longestStreak;
+  final DateTime? lastWorkedDate;
+  final List<DailyProgress> dailyHistory;
+
+  const ProjectProgress({
+    this.totalWordCount = 0,
+    this.totalSections = 0,
+    this.sectionsComplete = 0,
+    this.currentStreak = 0,
+    this.longestStreak = 0,
+    this.lastWorkedDate,
+    this.dailyHistory = const [],
+  });
+
+  ProjectProgress copyWith({
+    int? totalWordCount,
+    int? totalSections,
+    int? sectionsComplete,
+    int? currentStreak,
+    int? longestStreak,
+    DateTime? lastWorkedDate,
+    List<DailyProgress>? dailyHistory,
+  }) {
+    return ProjectProgress(
+      totalWordCount: totalWordCount ?? this.totalWordCount,
+      totalSections: totalSections ?? this.totalSections,
+      sectionsComplete: sectionsComplete ?? this.sectionsComplete,
+      currentStreak: currentStreak ?? this.currentStreak,
+      longestStreak: longestStreak ?? this.longestStreak,
+      lastWorkedDate: lastWorkedDate ?? this.lastWorkedDate,
+      dailyHistory: dailyHistory ?? this.dailyHistory,
+    );
+  }
+}
+
+/// Daily progress entry (used by adapters)
+class DailyProgress {
+  final DateTime date;
+  final int wordsWritten;
+  final int minutesWorked;
+
+  const DailyProgress({
+    required this.date,
+    required this.wordsWritten,
+    required this.minutesWorked,
+  });
+}
+
+/// Project goals container (used by adapters)
+class ProjectGoals {
+  final int? targetWordCount;
+  final DateTime? deadline;
+  final int? dailyWordGoal;
+
+  const ProjectGoals({
+    this.targetWordCount,
+    this.deadline,
+    this.dailyWordGoal,
+  });
+
+  ProjectGoals copyWith({
+    int? targetWordCount,
+    DateTime? deadline,
+    int? dailyWordGoal,
+  }) {
+    return ProjectGoals(
+      targetWordCount: targetWordCount ?? this.targetWordCount,
+      deadline: deadline ?? this.deadline,
+      dailyWordGoal: dailyWordGoal ?? this.dailyWordGoal,
+    );
+  }
+}
+
+/// AI memory for projects (used by adapters)
+class ProjectAIMemory {
+  final List<CharacterMemory> characters;
+  final List<LocationMemory> locations;
+  final List<TopicMemory> topics;
+  final List<FactMemory> facts;
+  final List<PlotPoint> plotPoints;
+  final StyleMemory style;
+
+  const ProjectAIMemory({
+    this.characters = const [],
+    this.locations = const [],
+    this.topics = const [],
+    this.facts = const [],
+    this.plotPoints = const [],
+    this.style = const StyleMemory(),
+  });
+
+  ProjectAIMemory copyWith({
+    List<CharacterMemory>? characters,
+    List<LocationMemory>? locations,
+    List<TopicMemory>? topics,
+    List<FactMemory>? facts,
+    List<PlotPoint>? plotPoints,
+    StyleMemory? style,
+  }) {
+    return ProjectAIMemory(
+      characters: characters ?? this.characters,
+      locations: locations ?? this.locations,
+      topics: topics ?? this.topics,
+      facts: facts ?? this.facts,
+      plotPoints: plotPoints ?? this.plotPoints,
+      style: style ?? this.style,
+    );
+  }
+}
+
+/// Topic memory (used by adapters)
+class TopicMemory {
+  final String id;
+  final String name;
+  final String description;
+  final List<String> keyPoints;
+
+  const TopicMemory({
+    required this.id,
+    required this.name,
+    this.description = '',
+    this.keyPoints = const [],
+  });
+}
+
+/// Fact memory (used by adapters)
+class FactMemory {
+  final String id;
+  final String fact;
+  final String? category;
+  final bool isImportant;
+
+  const FactMemory({
+    required this.id,
+    required this.fact,
+    this.category,
+    this.isImportant = false,
+  });
+}
+
+/// Plot point type enum (used by adapters)
+enum PlotPointType {
+  event,
+  twist,
+  revelation,
+  conflict,
+  resolution,
+  foreshadowing,
+  climax,
+  other,
+}
+
+/// Style memory for writing preferences (used by adapters)
+class StyleMemory {
+  final String? tone;
+  final String? pointOfView;
+  final String? tense;
+  final List<String> avoidWords;
+  final List<String> preferWords;
+  final String? customInstructions;
+
+  const StyleMemory({
+    this.tone,
+    this.pointOfView,
+    this.tense,
+    this.avoidWords = const [],
+    this.preferWords = const [],
+    this.customInstructions,
+  });
+
+  StyleMemory copyWith({
+    String? tone,
+    String? pointOfView,
+    String? tense,
+    List<String>? avoidWords,
+    List<String>? preferWords,
+    String? customInstructions,
+  }) {
+    return StyleMemory(
+      tone: tone ?? this.tone,
+      pointOfView: pointOfView ?? this.pointOfView,
+      tense: tense ?? this.tense,
+      avoidWords: avoidWords ?? this.avoidWords,
+      preferWords: preferWords ?? this.preferWords,
+      customInstructions: customInstructions ?? this.customInstructions,
+    );
+  }
 }

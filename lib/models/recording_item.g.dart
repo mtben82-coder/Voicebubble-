@@ -34,13 +34,14 @@ class RecordingItemAdapter extends TypeAdapter<RecordingItem> {
       tags: (fields[14] as List?)?.cast<String>(),
       reminderDateTime: fields[15] as DateTime?,
       reminderNotificationId: fields[16] as int?,
+      formattedContent: fields[17] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, RecordingItem obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -74,7 +75,9 @@ class RecordingItemAdapter extends TypeAdapter<RecordingItem> {
       ..writeByte(15)
       ..write(obj.reminderDateTime)
       ..writeByte(16)
-      ..write(obj.reminderNotificationId);
+      ..write(obj.reminderNotificationId)
+      ..writeByte(17)
+      ..write(obj.formattedContent);
   }
 
   @override
