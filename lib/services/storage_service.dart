@@ -5,8 +5,6 @@ import '../models/archived_item.dart';
 import '../models/recording_item.dart';
 import '../models/project.dart';
 import '../models/tag.dart';
-// Elite Projects imports
-import '../features/elite_projects/elite_project_adapters.dart';
 
 class StorageService {
   static const String _onboardingCompleteKey = 'onboarding_complete';
@@ -21,11 +19,10 @@ class StorageService {
     debugPrint('✅ Hive.initFlutter() completed!');
     
     // Register Hive type adapters
-    // ArchivedItem adapter removed - not needed
-    // if (!Hive.isAdapterRegistered(0)) {
-    //   Hive.registerAdapter(ArchivedItem.adapter);
-    //   debugPrint('✅ ArchivedItemAdapter registered (typeId: 0)');
-    // }
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(ArchivedItemAdapter());
+      debugPrint('✅ ArchivedItemAdapter registered (typeId: 0)');
+    }
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(RecordingItemAdapter());
       debugPrint('✅ RecordingItemAdapter registered (typeId: 1)');
@@ -38,11 +35,6 @@ class StorageService {
       Hive.registerAdapter(TagAdapter());
       debugPrint('✅ TagAdapter registered (typeId: 3)');
     }
-    
-    // Register Elite Projects adapters (typeIds 50-65)
-    debugPrint('🔧 Registering Elite Projects adapters...');
-    registerEliteProjectAdapters();
-    debugPrint('✅ Elite Projects adapters registered!');
     
     debugPrint('🎉 ALL HIVE SETUP COMPLETE!');
   }

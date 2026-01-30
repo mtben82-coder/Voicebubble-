@@ -16,9 +16,6 @@ import '../../services/continue_service.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
-// Elite Projects
-import '../../features/elite_projects/elite_projects_router.dart';
-import '../../features/elite_projects/library_projects_tab.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -213,31 +210,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
                       // Content based on mode
                       if (_showProjects) ...[
-                        // Elite Projects Tab
-                        LibraryProjectsTab(
-                          projectService: eliteProjects.projectService,
-                          onProjectTap: (project) {
-                            Navigator.push(
-                              context,
-                              eliteProjects.workspaceScreen(context, project),
-                            );
-                          },
-                          onCreateProject: () {
-                            Navigator.push(
-                              context,
-                              eliteProjects.creationWizardScreen(context),
-                            );
-                          },
-                          onQuickRecord: (project) {
-                            // TODO: Connect to recording flow
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => RecordingScreen(),
-                              ),
-                            );
-                          },
-                        ),
+                        // Projects list
+                        if (projects.isEmpty)
+                          _buildEmptyState('No projects yet', 'Create your first project', secondaryTextColor)
+                        else
+                          ...projects.map((project) => ProjectCard(
+                                project: project,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ProjectDetailScreen(projectId: project.id),
+                                    ),
+                                  );
+                                },
+                              )),
                       ] else ...[
                         // Recordings grid
                         if (recordings.isEmpty)
@@ -274,12 +261,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       floatingActionButton: _showProjects
           ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  eliteProjects.creationWizardScreen(context),
-                );
-              },
+              onPressed: () => _showCreateProjectDialog(context),
               backgroundColor: const Color(0xFF3B82F6),
               child: const Icon(Icons.add, color: Colors.white),
             )
