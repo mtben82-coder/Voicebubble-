@@ -17,8 +17,8 @@ import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
 // Elite Projects
-import '../../projectsnew/elite_projects_router.dart';
-import '../../projectsnew/library_projects_tab.dart';
+import '../../features/elite_projects/elite_projects_router.dart';
+import '../../features/elite_projects/library_projects_tab.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});

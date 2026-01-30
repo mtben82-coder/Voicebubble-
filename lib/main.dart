@@ -10,8 +10,9 @@ import 'services/storage_service.dart'; // ADD THIS
 import 'services/reminder_manager.dart';
 import 'services/analytics_service.dart';
 // Elite Projects
-import 'projectsnew/elite_projects_router.dart';
+import 'features/elite_projects/elite_projects_router.dart';
 import 'screens/main/main_navigation.dart';
+import 'screens/main/recording_screen.dart';
 import 'screens/onboarding/onboarding_one.dart';
 import 'screens/onboarding/onboarding_two.dart';
 import 'screens/onboarding/onboarding_three_new.dart';

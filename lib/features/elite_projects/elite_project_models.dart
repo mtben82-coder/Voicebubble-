@@ -394,8 +394,8 @@ class ProjectSection {
     'status': status.name,
     'recordingIds': recordingIds,
     'wordCount': wordCount,
-    'createdAt': createdAt.toIso8601String(),
-    'updatedAt': updatedAt.toIso8601String(),
+    'createdAt': createdAt?.toIso8601String(),
+    'updatedAt': updatedAt?.toIso8601String(),
     'metadata': metadata,
     'subsections': subsections?.map((s) => s.toJson()).toList(),
   };
@@ -441,6 +441,16 @@ extension SectionStatusExtension on SectionStatus {
         return Colors.green;
     }
   }
+}
+
+enum PlotPointType {
+  event,
+  revelation,
+  conflict,
+  resolution,
+  foreshadowing,
+  callback,
+  twist,
 }
 
 // =============================================================================
@@ -1195,81 +1205,3 @@ class ProjectAIMemory {
   }
 }
 
-/// Topic memory (used by adapters)
-class TopicMemory {
-  final String id;
-  final String name;
-  final String description;
-  final List<String> keyPoints;
-
-  const TopicMemory({
-    required this.id,
-    required this.name,
-    this.description = '',
-    this.keyPoints = const [],
-  });
-}
-
-/// Fact memory (used by adapters)
-class FactMemory {
-  final String id;
-  final String fact;
-  final String? category;
-  final bool isImportant;
-
-  const FactMemory({
-    required this.id,
-    required this.fact,
-    this.category,
-    this.isImportant = false,
-  });
-}
-
-/// Plot point type enum (used by adapters)
-enum PlotPointType {
-  event,
-  twist,
-  revelation,
-  conflict,
-  resolution,
-  foreshadowing,
-  climax,
-  other,
-}
-
-/// Style memory for writing preferences (used by adapters)
-class StyleMemory {
-  final String? tone;
-  final String? pointOfView;
-  final String? tense;
-  final List<String> avoidWords;
-  final List<String> preferWords;
-  final String? customInstructions;
-
-  const StyleMemory({
-    this.tone,
-    this.pointOfView,
-    this.tense,
-    this.avoidWords = const [],
-    this.preferWords = const [],
-    this.customInstructions,
-  });
-
-  StyleMemory copyWith({
-    String? tone,
-    String? pointOfView,
-    String? tense,
-    List<String>? avoidWords,
-    List<String>? preferWords,
-    String? customInstructions,
-  }) {
-    return StyleMemory(
-      tone: tone ?? this.tone,
-      pointOfView: pointOfView ?? this.pointOfView,
-      tense: tense ?? this.tense,
-      avoidWords: avoidWords ?? this.avoidWords,
-      preferWords: preferWords ?? this.preferWords,
-      customInstructions: customInstructions ?? this.customInstructions,
-    );
-  }
-}

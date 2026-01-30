@@ -6,7 +6,7 @@ import '../models/recording_item.dart';
 import '../models/project.dart';
 import '../models/tag.dart';
 // Elite Projects imports
-import '../projectsnew/elite_project_adapters.dart';
+import '../features/elite_projects/elite_project_adapters.dart';
 
 class StorageService {
   static const String _onboardingCompleteKey = 'onboarding_complete';
