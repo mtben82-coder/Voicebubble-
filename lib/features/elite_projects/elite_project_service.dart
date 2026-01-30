@@ -221,6 +221,21 @@ class EliteProjectService extends ChangeNotifier {
   // SECTION OPERATIONS
   // ============================================================================
 
+  /// Add a section by title (convenience method)
+  Future<ProjectSection> addSectionByTitle(
+    String projectId,
+    String title, {
+    String? parentSectionId,
+  }) async {
+    final section = ProjectSection(
+      id: _uuid.v4(),
+      title: title,
+    );
+    
+    await addSection(projectId, section, parentSectionId: parentSectionId);
+    return section;
+  }
+
   Future<void> addSection(
     String projectId,
     ProjectSection section, {
@@ -447,6 +462,62 @@ class EliteProjectService extends ChangeNotifier {
   }
 
   // ============================================================================
+  // SECTION STATUS AND TITLE OPERATIONS
+  // ============================================================================
+
+  Future<void> updateSectionStatus(
+    String projectId,
+    String sectionId,
+    SectionStatus status,
+  ) async {
+    final project = getProject(projectId);
+    if (project == null) return;
+    
+    final section = _findSection(project.structure.sections, sectionId);
+    if (section == null) return;
+    
+    final updatedSection = section.copyWith(
+      status: status,
+      updatedAt: DateTime.now(),
+    );
+    
+    await updateSection(projectId, updatedSection);
+  }
+
+  Future<void> updateSectionTitle(
+    String projectId,
+    String sectionId,
+    String title,
+  ) async {
+    final project = getProject(projectId);
+    if (project == null) return;
+    
+    final section = _findSection(project.structure.sections, sectionId);
+    if (section == null) return;
+    
+    final updatedSection = section.copyWith(
+      title: title,
+      updatedAt: DateTime.now(),
+    );
+    
+    await updateSection(projectId, updatedSection);
+  }
+
+  Future<void> archiveProject(String projectId) async {
+    final project = getProject(projectId);
+    if (project == null) return;
+    
+    await updateProject(project.copyWith(isArchived: true));
+  }
+
+  Future<void> unarchiveProject(String projectId) async {
+    final project = getProject(projectId);
+    if (project == null) return;
+    
+    await updateProject(project.copyWith(isArchived: false));
+  }
+
+  // ============================================================================
   // DELETE OPERATIONS
   // ============================================================================
 
@@ -466,9 +537,13 @@ class EliteProjectService extends ChangeNotifier {
   // ACTIVE PROJECT
   // ============================================================================
 
-  Future<void> setActiveProject(String projectId) async {
+  Future<void> setActiveProject(String? projectId) async {
     _activeProjectId = projectId;
-    await _settingsBox?.put('activeProjectId', projectId);
+    if (projectId != null) {
+      await _settingsBox?.put('activeProjectId', projectId);
+    } else {
+      await _settingsBox?.delete('activeProjectId');
+    }
     notifyListeners();
   }
 
