@@ -1539,6 +1539,7 @@ class ProjectStatistics {
   final Map<EliteProjectType, int> projectsByType;
   final int currentStreak;
   final int longestStreak;
+  final Duration totalTimeWorked;
 
   const ProjectStatistics({
     this.totalProjects = 0,
@@ -1550,6 +1551,7 @@ class ProjectStatistics {
     this.projectsByType = const {},
     this.currentStreak = 0,
     this.longestStreak = 0,
+    this.totalTimeWorked = Duration.zero,
   });
 
   double get completionRate => 
@@ -1559,6 +1561,7 @@ class ProjectStatistics {
     int totalWords = 0;
     int totalSections = 0;
     int completedSections = 0;
+    int totalMinutes = 0;
     final typeCount = <EliteProjectType, int>{};
     int currentStreak = 0;
     int longestStreak = 0;
@@ -1567,6 +1570,7 @@ class ProjectStatistics {
       totalWords += project.progress.totalWordCount;
       totalSections += project.structure.sections.length;
       completedSections += project.completedSectionsCount;
+      totalMinutes += project.progress.totalTimeMinutes;
       typeCount[project.type] = (typeCount[project.type] ?? 0) + 1;
       
       if (project.progress.currentStreak > currentStreak) {
@@ -1587,6 +1591,7 @@ class ProjectStatistics {
       projectsByType: typeCount,
       currentStreak: currentStreak,
       longestStreak: longestStreak,
+      totalTimeWorked: Duration(minutes: totalMinutes),
     );
   }
 }
