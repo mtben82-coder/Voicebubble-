@@ -259,13 +259,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
         ),
       ),
-      floatingActionButton: _showProjects
-          ? FloatingActionButton(
-              onPressed: () => _showCreateProjectDialog(context),
-              backgroundColor: const Color(0xFF3B82F6),
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (_showProjects) {
+            _showCreateProjectDialog(context);
+          } else {
+            // Navigate to recording screen for new recording
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RecordingScreen(),
+              ),
+            );
+          }
+        },
+        backgroundColor: const Color(0xFF3B82F6),
+        child: Icon(
+          _showProjects ? Icons.add : Icons.mic,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 

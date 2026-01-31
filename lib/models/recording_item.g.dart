@@ -41,7 +41,7 @@ class RecordingItemAdapter extends TypeAdapter<RecordingItem> {
   @override
   void write(BinaryWriter writer, RecordingItem obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -77,7 +77,9 @@ class RecordingItemAdapter extends TypeAdapter<RecordingItem> {
       ..writeByte(16)
       ..write(obj.reminderNotificationId)
       ..writeByte(17)
-      ..write(obj.formattedContent);
+      ..write(obj.formattedContent)
+      ..writeByte(18)
+      ..write(obj.customTitle);
   }
 
   @override

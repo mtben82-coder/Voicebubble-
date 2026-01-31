@@ -28,6 +28,21 @@ class RecordingDetailScreen extends StatefulWidget {
 }
 
 class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
+  bool _isEditingTitle = false;
+  late TextEditingController _titleController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+  }
+  
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final backgroundColor = const Color(0xFF000000);
@@ -68,16 +83,76 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          _getTitleFromContent(item.finalText),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: _isEditingTitle
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _titleController,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: textColor,
+                                      ),
+                                      decoration: InputDecoration(
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: primaryColor),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: primaryColor),
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        isDense: true,
+                                      ),
+                                      autofocus: true,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: () => _saveTitle(appState, item),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: primaryColor,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Icon(Icons.check, color: Colors.white, size: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: _cancelEditingTitle,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: surfaceColor,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Icon(Icons.close, color: textColor, size: 16),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : GestureDetector(
+                                onTap: () => _startEditingTitle(item),
+                                child: Text(
+                                  _getDisplayTitle(item),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                       ),
                       Container(
                         width: 36,
@@ -188,6 +263,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
     );
   }
 
+  String _getDisplayTitle(RecordingItem item) {
+    // Prioritize custom title over generated title
+    if (item.customTitle != null && item.customTitle!.isNotEmpty) {
+      return item.customTitle!;
+    }
+    return _getTitleFromContent(item.finalText);
+  }
+  
   String _getTitleFromContent(String content) {
     if (content.isEmpty) return 'Untitled';
     
@@ -196,6 +279,32 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
     if (firstLine.length <= 50) return firstLine;
     
     return '${firstLine.substring(0, 47)}...';
+  }
+  
+  void _startEditingTitle(RecordingItem item) {
+    setState(() {
+      _isEditingTitle = true;
+      _titleController.text = item.customTitle ?? _getTitleFromContent(item.finalText);
+    });
+  }
+  
+  void _cancelEditingTitle() {
+    setState(() {
+      _isEditingTitle = false;
+      _titleController.clear();
+    });
+  }
+  
+  Future<void> _saveTitle(AppStateProvider appState, RecordingItem item) async {
+    final newTitle = _titleController.text.trim();
+    if (newTitle.isNotEmpty) {
+      final updatedItem = item.copyWith(customTitle: newTitle);
+      await appState.updateRecordingItem(updatedItem);
+    }
+    setState(() {
+      _isEditingTitle = false;
+      _titleController.clear();
+    });
   }
 
   Future<void> _saveContent(AppStateProvider appState, RecordingItem item, String plainText, String deltaJson) async {

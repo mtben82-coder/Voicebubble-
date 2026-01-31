@@ -58,6 +58,9 @@ class RecordingItem {
   
   @HiveField(17)
   String? formattedContent; // Quill Delta JSON for rich text editing
+  
+  @HiveField(18)
+  String? customTitle; // User-defined custom title
 
   RecordingItem({
     required this.id,
@@ -78,6 +81,7 @@ class RecordingItem {
     this.reminderDateTime,
     this.reminderNotificationId,
     this.formattedContent,
+    this.customTitle,
   }) : continuedInIds = continuedInIds ?? [],
        tags = tags ?? [];
 
@@ -129,6 +133,7 @@ class RecordingItem {
     DateTime? reminderDateTime,
     int? reminderNotificationId,
     String? formattedContent,
+    String? customTitle,
     bool clearReminder = false, // Flag to explicitly clear reminder
   }) {
     return RecordingItem(
@@ -150,6 +155,7 @@ class RecordingItem {
       reminderDateTime: clearReminder ? null : (reminderDateTime ?? this.reminderDateTime),
       reminderNotificationId: clearReminder ? null : (reminderNotificationId ?? this.reminderNotificationId),
       formattedContent: formattedContent ?? this.formattedContent,
+      customTitle: customTitle ?? this.customTitle,
     );
   }
 }
