@@ -304,7 +304,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     List<Color> gradientColors,
   ) {
     return GestureDetector(
-        onTap: () {
+      onTap: () {
           // Navigate to detail screen
           Navigator.push(
             context,
@@ -312,8 +312,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               builder: (context) => RecordingDetailScreen(recordingId: item.id),
             ),
           );
-        },
-        child: Container(
+      },
+      child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: surfaceColor,
