@@ -5,6 +5,9 @@ import '../models/archived_item.dart';
 import '../models/recording_item.dart';
 import '../models/project.dart';
 import '../models/tag.dart';
+// ✨ NEW IMPORT ✨
+import '../models/version_snapshot.dart';
+// ✨ END NEW IMPORT ✨
 
 class StorageService {
   static const String _onboardingCompleteKey = 'onboarding_complete';
@@ -35,6 +38,12 @@ class StorageService {
       Hive.registerAdapter(TagAdapter());
       debugPrint('✅ TagAdapter registered (typeId: 3)');
     }
+    // ✨ NEW ADAPTER ✨
+    if (!Hive.isAdapterRegistered(5)) {
+      Hive.registerAdapter(VersionSnapshotAdapter());
+      debugPrint('✅ VersionSnapshotAdapter registered (typeId: 5)');
+    }
+    // ✨ END NEW ADAPTER ✨
     
     debugPrint('🎉 ALL HIVE SETUP COMPLETE!');
   }

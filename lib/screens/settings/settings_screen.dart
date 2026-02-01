@@ -9,6 +9,11 @@ import '../paywall/paywall_screen.dart';
 import 'terms_screen.dart';
 import 'privacy_screen.dart';
 import 'help_screen.dart';
+// ✨ NEW IMPORTS ✨
+import '../analytics_dashboard.dart';
+import '../templates_gallery.dart';
+import 'recording_detail_screen.dart';
+// ✨ END NEW IMPORTS ✨
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -158,6 +163,64 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  
+                  // ✨ FEATURES SECTION ✨
+                  _buildSectionHeader('FEATURES', secondaryTextColor),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsItem(
+                          icon: Icons.article_outlined,
+                          title: 'Templates',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => TemplatesGallery(
+                                onTemplateSelected: (note) async {
+                                  final appState = context.read<AppStateProvider>();
+                                  await appState.saveRecording(note);
+                                  
+                                  if (context.mounted) {
+                                    Navigator.pop(context); // Close templates
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => RecordingDetailScreen(recordingId: note.id),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSettingsItem(
+                          icon: Icons.analytics_outlined,
+                          title: 'Analytics',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AnalyticsDashboard()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // ✨ END FEATURES SECTION ✨
                   
                   // About Section
                   _buildSectionHeader('ABOUT', secondaryTextColor),

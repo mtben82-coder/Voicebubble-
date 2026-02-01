@@ -17,6 +17,13 @@ import '../../constants/presets.dart';
 import 'recording_screen.dart';
 import 'image_creation_screen.dart';
 import 'todo_creation_screen.dart';
+// ✨ NEW IMPORTS ✨
+import '../version_history_screen.dart';
+import '../../widgets/export_dialogs.dart';
+import '../../widgets/background_picker.dart';
+import '../../services/version_history_service.dart';
+import '../../constants/visual_constants.dart';
+// ✨ END NEW IMPORTS ✨
 
 class RecordingDetailScreen extends StatefulWidget {
   final String recordingId;
@@ -64,7 +71,27 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
               orElse: () => throw Exception('Recording not found'),
             );
 
-            return Column(
+            // ✨ BUILD BACKGROUND IF SET ✨
+            Widget? backgroundWidget;
+            if (item.background != null) {
+              final bg = VisualConstants.findById(item.background!);
+              if (bg != null) {
+                backgroundWidget = Opacity(
+                  opacity: 0.15, // Subtle so text is readable
+                  child: bg.buildBackground(context),
+                );
+              }
+            }
+            // ✨ END BACKGROUND BUILD ✨
+
+            return Stack(
+              children: [
+                // Background layer
+                if (backgroundWidget != null)
+                  Positioned.fill(child: backgroundWidget),
+                
+                // Content layer
+                Column(
               children: [
                 // Compact Header
                 Container(
@@ -157,6 +184,33 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                                 ),
                               ),
                       ),
+                      
+                      // ✨ VERSION HISTORY BUTTON ✨
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => VersionHistoryScreen(note: item),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.history, color: primaryColor, size: 18),
+                          tooltip: 'Version History',
+                        ),
+                      ),
+                      // ✨ END VERSION HISTORY BUTTON ✨
+                      
+                      const SizedBox(width: 8),
                       Container(
                         width: 36,
                         height: 36,
@@ -210,6 +264,29 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                               ],
                             ),
                           ),
+                          // ✨ EXPORT MENU ITEM ✨
+                          PopupMenuItem(
+                            value: 'export',
+                            child: Row(
+                              children: [
+                                Icon(Icons.download, color: textColor, size: 18),
+                                const SizedBox(width: 12),
+                                Text('Export', style: TextStyle(color: textColor)),
+                              ],
+                            ),
+                          ),
+                          // ✨ BACKGROUND MENU ITEM ✨
+                          PopupMenuItem(
+                            value: 'background',
+                            child: Row(
+                              children: [
+                                Icon(Icons.image, color: textColor, size: 18),
+                                const SizedBox(width: 12),
+                                Text('Change Background', style: TextStyle(color: textColor)),
+                              ],
+                            ),
+                          ),
+                          // ✨ END NEW MENU ITEMS ✨
                           const PopupMenuDivider(),
                           PopupMenuItem(
                             value: 'delete',
@@ -233,7 +310,9 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                   child: _buildContentEditor(item, appState),
                 ),
               ],
-            );
+            ), // ← End of Column
+              ], // ← End of Stack children
+            ); // ← End of Stack
           },
         ),
       ),
@@ -540,6 +619,12 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       );
       
       await appState.updateRecording(updatedItem);
+      
+      // ✨ AUTO-SAVE TO VERSION HISTORY ✨
+      final versionService = VersionHistoryService();
+      await versionService.saveVersion(updatedItem, 'Auto-save');
+      // ✨ END AUTO-SAVE ✨
+      
       debugPrint('✅ Saved formatted content for item: ${item.id}');
     } catch (e) {
       debugPrint('❌ Error saving formatted content: $e');
@@ -575,6 +660,29 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           ),
         );
         break;
+      // ✨ EXPORT HANDLER ✨
+      case 'export':
+        showDialog(
+          context: context,
+          builder: (_) => ExportDialog(note: item),
+        );
+        break;
+      // ✨ BACKGROUND HANDLER ✨
+      case 'background':
+        showDialog(
+          context: context,
+          builder: (_) => BackgroundPickerDialog(
+            currentBackground: item.background ?? 'color_white',
+            onSelect: (backgroundId) async {
+              final updatedItem = item.copyWith(background: backgroundId);
+              await appState.saveRecording(updatedItem);
+              Navigator.pop(context);
+              if (mounted) setState(() {});
+            },
+          ),
+        );
+        break;
+      // ✨ END NEW HANDLERS ✨
       case 'delete':
         _showDeleteConfirmation(context, appState, item.id);
         break;

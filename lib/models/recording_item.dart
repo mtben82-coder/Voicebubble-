@@ -64,6 +64,9 @@ class RecordingItem {
   
   @HiveField(19)
   String contentType; // 'voice', 'text', 'image', etc.
+  
+  @HiveField(20)
+  String? background; // Background ID (e.g., 'color_lavender', 'gradient_sunset', 'mountain')
 
   RecordingItem({
     required this.id,
@@ -86,6 +89,7 @@ class RecordingItem {
     this.formattedContent,
     this.customTitle,
     this.contentType = 'voice', // Default to voice for backward compatibility
+    this.background, // Optional background
   }) : continuedInIds = continuedInIds ?? [],
        tags = tags ?? [];
 
@@ -117,7 +121,6 @@ class RecordingItem {
     }
   }
 
-  // Copy with method for updates
   RecordingItem copyWith({
     String? id,
     String? rawTranscript,
@@ -138,6 +141,8 @@ class RecordingItem {
     int? reminderNotificationId,
     String? formattedContent,
     String? customTitle,
+    String? contentType,
+    String? background,
     bool clearReminder = false, // Flag to explicitly clear reminder
   }) {
     return RecordingItem(
@@ -161,6 +166,7 @@ class RecordingItem {
       formattedContent: formattedContent ?? this.formattedContent,
       customTitle: customTitle ?? this.customTitle,
       contentType: contentType ?? this.contentType,
+      background: background ?? this.background,
     );
   }
 }

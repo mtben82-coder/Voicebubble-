@@ -20,6 +20,9 @@ import 'recording_screen.dart';
 import 'text_creation_screen.dart';
 import 'image_creation_screen.dart';
 import 'todo_creation_screen.dart';
+// ✨ NEW IMPORT ✨
+import '../batch_operations_screen.dart';
+// ✨ END NEW IMPORT ✨
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -198,6 +201,37 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                 ),
                               ),
                             ),
+                            // ✨ BATCH OPERATIONS BUTTON ✨
+                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BatchOperationsScreen(
+                                      allNotes: recordings,
+                                      onComplete: (_) {
+                                        if (mounted) setState(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: surfaceColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.checklist,
+                                  color: secondaryTextColor,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            // ✨ END BATCH OPERATIONS BUTTON ✨
                           ],
                         ],
                       ),

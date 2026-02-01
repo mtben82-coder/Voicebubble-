@@ -67,6 +67,9 @@ dependencies:
   flutter_quill: ^9.0.0
   flutter_quill_extensions: ^9.0.0
   gal: 2.2.0  # Exact version to avoid compatibility issues
+  
+  # PDF Export
+  pdf: ^3.10.4
 dependency_overrides:
   # Fix flutter_inappwebview namespace issue
   flutter_inappwebview: ^6.1.5
@@ -86,6 +89,7 @@ flutter:
   
   assets:
     - assets/app_logo.png
+    - assets/backgrounds/
   
   # Note: .env is not needed in production builds
   # API keys should be set as environment variables
