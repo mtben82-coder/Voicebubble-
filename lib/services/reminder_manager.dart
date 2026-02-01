@@ -113,6 +113,20 @@ class ReminderManager {
     }
   }
 
+  /// Schedule a reminder for an item (standalone method for creation screens)
+  Future<bool> scheduleReminder(RecordingItem item) async {
+    if (item.reminderDateTime == null) return false;
+
+    final result = await _notificationService.scheduleReminder(
+      itemId: item.id,
+      title: 'VoiceBubble Reminder',
+      body: _getNotificationBody(item),
+      scheduledTime: item.reminderDateTime!,
+    );
+
+    return result.success;
+  }
+
   /// Cancel reminder when item is deleted
   Future<void> cancelReminderForDeletedItem(RecordingItem item) async {
     if (item.reminderDateTime == null) return;
